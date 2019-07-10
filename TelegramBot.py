@@ -15,6 +15,7 @@ __status__ = "Production"
 import feedparser
 from functools import wraps
 import datetime
+import emoji
 import random
 import requests
 import sys
@@ -35,29 +36,32 @@ FEEDS = {
 }
 
 # TODO: schrijf start functie
-def start(bot, update):
-    pass
+def start(update, context):
+    help(update, context)
 
-def help(bot, update):
+def help(update, context):
+    """ displays a help message (Dutch) """
+
     msg = """ Deze bot heeft de volgende *commandos*:
     - /help : laat dit bericht zien
-    - /weer _[locatie]_ : geeft weer terug op locatie (standaard locatie Amsterdam)
+    - /weer _[locatie]_ : geeft weer terug op locatie
     - /hallo : krijg een groet van deze bot
     - /waarom : krijg een willekeurige reden terug
     """
-    bot.send_message(chat_id=update.message.chat_id, text=msg,
+    update.send_message(chat_id=context.message.chat_id, text=msg,
                      parse_mode=telegram.ParseMode.MARKDOWN)
 
-def hello(bot, update):
-    telegram_user = update.message.from_user
-    update.message.reply_text(f"Hallo {telegram_user.first_name}!")
+def hello(update, context):
+    telegram_user = context.message.from_user
+    context.message.reply_text(f"Hallo {telegram_user.first_name}!")
 
     # bot.send_message(chat_id=update.message.chat_id,
     #              text="*bold* _italic_ `fixed width font` [link](http://google.com).",
     #              parse_mode=telegram.ParseMode.MARKDOWN)
 
-def weather(bot, update):
-    chat_id = update.message.chat_id
+def weather(update, context):
+    chat_id = context.message.chat_id
+
     #board = ['Amsterdam','Anders']
     # kb = [[telegram.KeyboardButton('Amsterdam')]]
     # kb, one_time_keyboard=True
@@ -65,11 +69,14 @@ def weather(bot, update):
     # reply_markup=kb_markup
 
     try:
-        location_str = str.split(update.message.text, " ")[1]
+        location_str = context.args
+        assert(location_str, str)
+
     except:
-        bot.send_message(chat_id=chat_id, text="Geen locatie gegeven. Standaard: Amsterdam")
+        update.send_message(chat_id=chat_id, text="Geen locatie gegeven. Standaard: Amsterdam")
         location_str = "Amsterdam"
 
+    # get coordinates for DARKSKY based on string
     geolocator = Nominatim()
     location = geolocator.geocode(location_str)
 
@@ -83,43 +90,59 @@ def weather(bot, update):
 
     URL = (DARKYSKY + "/" + token + "/" + str(location.latitude)
            + "," + str(location.longitude) + '?lang=nl&units=si')
-
-
-    # print(URL)
-
     response = requests.get(URL)
-
     out = format_weather(location, response.json())
 
-    update.message.reply_text('Hallo!\n\n' + out)
+    update.send_message(chat_id=context.message.chat_id,
+                     text=out,
+                     parse_mode=telegram.ParseMode.MARKDOWN)
 
 def format_weather(location, response):
-    # print(response)
+    """ pulls wanted variables from JASON-object return by the DARK-SKY API,
+        gives back formatted string (Dutch)"""
 
     maxTemp = response['daily']['data'][0]['apparentTemperatureHigh']
     minTemp = response['daily']['data'][0]['apparentTemperatureLow']
-    regenKans = response['daily']['data'][0]['precipProbability']*100
+    precipProb = response['daily']['data'][0]['precipProbability']*100
+    precipType = response['daily']['data'][0]['precipType']
+    precipIntensity = response['daily']['data'][0]['precipIntensity']
+
     s = ''
     s += 'Locatie: ' + str(location) + '\n\n'
     s += (response['daily']['summary'] + ' ' +
           response['daily']['data'][0]['summary'] + '\n\n')
+
+    s += icon_helper(response['daily']['icon']) + '\n\n'
+
     s += ('Maximum Temperatuur: ' + str(maxTemp) + ' °C\n'
           + 'Minimum Temperatuur: ' + str(minTemp) + ' °C')
 
-    if response['daily']['data'][0]['precipType'] == 'rain':
-         s += ('\nRegenkans: ' +
-               str(regenKans) + '%\n\n')
+    if precipIntensity:
 
-    # kleding advies:
+        if  precipType == 'rain':
+            s += '\nRegenkans: '
+        elif precipType == 'snow':
+            s += '\nSneeuwkans: '
+        elif precipType == 'sleet':
+            s += '\nHagelkans: '
 
+        s += str(precipProb) + '%\n\n'
+
+    # take avarage temp for day
     Temp = (maxTemp + minTemp)/2
-    s += "Kledingadvies: \n" + clothing_advice(Temp, regenKans)
+
+    # prevent errors
+    if precipIntensity == None:
+        precipIntensity = 0
+
+    s += 'Kledingadvies: \n' + clothing_advice(Temp, precipProb, precipIntensity)
 
     return s
 
-def clothing_advice(temperature, regenkans):
-    """ adapted from https://www.moetikeenjasaan.nl """
-    if regenkans > 70.0:
+def clothing_advice(temperature, precipProb, precipIntensity):
+    """ adapted from https://www.moetikeenjasaan.nl
+        gives clothing advice based on precipation (Dutch)"""
+    if precipProb > 70.0 or precipIntensity > 0.05:
         if temperature < 9:
             return 'Winterjas'
         elif temperature < 15:
@@ -141,7 +164,26 @@ def clothing_advice(temperature, regenkans):
 
         return 'zo weinig mogelijk kleren lol'
 
-def get_news(bot, update):
+def icon_helper(s):
+    """ returns the appropriate emoticon for a weather condition """
+
+    # using emoji package to convert string to unicode
+    return {
+        "clear-day" : emoji.emojize(":sunny:"),
+         "clear-night" : emoji.emojize(":full_moon:"),
+         "rain" : emoji.emojize(":cloud_with_rain:"),
+         "snow" : emoji.emojize(":cloud_with_snow: "),
+         "sleet" : emoji.emojize(":cloud_with_snow:"),
+         "wind" : emoji.emojize(":wind_blowing_face:"),
+         "fog" : emoji.emojize(":fog:"),
+         "cloudy" : emoji.emojize(":cloud:"),
+         "partly-cloudy-day" : emoji.emojize(":white_sun_with_small_cloud:"),
+         "partly-cloudy-night" : emoji.emojize(":white_sun_behind_cloud:")
+    }.get(s, emoji.emojize(":earth_africa:"))
+
+
+# TODO: finish news function
+def get_news(update, context):
     """ https://pythonhosted.org/feedparser/introduction.html"""
 
     times_parsed = [[]]*len(FEEDS)
@@ -168,13 +210,14 @@ def get_news(bot, update):
     for i, feed in enumerate(FEEDS):
 
         # get the feed and update the pub time
-        pud_dates[i] = get_feed(bot, update, FEEDS[feed],
+        pud_dates[i] = get_feed(update, context, FEEDS[feed],
                                 times_parsed[i])
 
     print(f"sleeping {UPDATE_FREQ}")
     time.sleep(UPDATE_FREQ)
 
-def get_feed(bot, update, feedlink, pub_time):
+# TODO: see above, finish news function
+def get_feed(update, context, feedlink, pub_time):
     """ returns the new article of a given rss feed with a etag and modified tag """
 
     newfound = False
@@ -220,24 +263,22 @@ def format_rss(text):
          text.link)
     return s
 
-def view_feeds(bot, update):
+def view_feeds(update, context):
     mes = "This bot pulls from the following feeds: "
     update.message.reply_text(mes + f"\n {FEEDS.keys()}")
 
-# TODO: make why function
-def why(bot, update):
+def why(update, context):
 
-    # open file pak een random reden
+    # return a random reason from file
     with open('redenen.txt') as file:
         lines = file.readlines()
         t = random.choice(lines)
 
-    update.message.reply_text(t)
-
-    pass
+    context.message.reply_text(t)
 
 def main():
-    """ Create the Updater and pass it your bot's token. """
+    """ Create the updater and pass it your bot's token
+        and add the handlers to the bot. """
 
     # token is in other file for security
     with open('telegramtoken.txt') as file:
@@ -246,6 +287,7 @@ def main():
     updater = Updater(token=t)
     dp = updater.dispatcher
 
+    # log errors
     logging.basicConfig(
         format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
         level=logging.INFO)
@@ -256,8 +298,6 @@ def main():
     dp.add_handler(CommandHandler('news', get_news))
     dp.add_handler(CommandHandler('waarom', why))
     dp.add_handler(CommandHandler('weer', weather))
-
-
 
     # updater.add_error_handler(error)
     updater.start_polling()

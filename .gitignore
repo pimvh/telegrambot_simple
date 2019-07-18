@@ -1,5 +1,5 @@
 # files to ignore
 
-.txt
-.jpg
-.bash
+*.txt
+*.jpg
+*.bash

@@ -40,11 +40,11 @@ from telegram.ext import (Updater, CommandHandler, ConversationHandler,
 import telegram.ext
 
 # Token filename
-TELEGRAM_TOKEN = "token_telegram_API.txt"
+TELEGRAM_TOKEN = "tokens/token_telegram_API.txt"
 
 # Weather API tokenfile, URL
 DARKYSKY = "https://api.darksky.net/forecast"
-DARKSKY_TOKEN = "token_DARKSKY_API.txt"
+DARKSKY_TOKEN = "tokens/token_DARKSKY_API.txt"
 
 # Conversation states
 CHOICE, UPDATE = range(2)

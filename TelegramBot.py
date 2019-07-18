@@ -66,6 +66,21 @@ def start(update, context):
     # help(update, context)
     pass
 
+def help(update, context):
+    """ displays a help message (Dutch) """
+
+    bot = context.bot
+    msg = """ Deze bot heeft de volgende *commandos*:
+    - /help : laat dit bericht zien
+    - /weer _[locatie]_ : geeft weer terug op locatie
+    - /hallo : krijg een groet van deze bot
+    - /waarom : krijg een willekeurige reden terug
+    - /bier: een database om bij te houden: van wie je bier krijgt of aan wie je bier schuldig bent
+    """
+
+    bot.send_message(chat_id=update.message.chat_id, text=msg,
+                        parse_mode=telegram.ParseMode.MARKDOWN)
+
 def hello(update, context):
     chat_id = update.message.chat_id
     user = update.message.from_user
@@ -249,20 +264,6 @@ def done(update, context):
                      reply_markup=ReplyKeyboardRemove())
 
     return ConversationHandler.END
-
-def help(update, context):
-    """ displays a help message (Dutch) """
-
-    bot = context.bot
-    msg = """ Deze bot heeft de volgende *commandos*:
-    - /help : laat dit bericht zien
-    - /weer _[locatie]_ : geeft weer terug op locatie
-    - /hallo : krijg een groet van deze bot
-    - /waarom : krijg een willekeurige reden terug
-    """
-
-    bot.send_message(chat_id=update.message.chat_id, text=msg,
-                        parse_mode=telegram.ParseMode.MARKDOWN)
 
 def weather(update, context):
     chat_id = update.message.chat_id

@@ -1,5 +1,5 @@
 # files to ignore
 
-token.txt
-darkskytoken.txt
-SquaryMcSquareFace-16-1-1024x791.jpg
+.txt
+.jpg
+.bash

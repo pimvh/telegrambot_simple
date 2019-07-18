@@ -1,6 +1,9 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
 """
+The module below implements a telegram bot with a number of commandhandlers:
+- a weather lookup function
+- a why function returns random reasons to the user
 """
 
 __author__ = """Pim van Helvoirt"""
@@ -12,68 +15,272 @@ __maintainer__ = "None"
 __email__ = "pim.van.helvoirt@home.nl"
 __status__ = "Production"
 
-import feedparser
-from functools import wraps
+import collections
 import datetime
 import emoji
+import feedparser
+from functools import wraps
+import logging
+import operator
+import pickle
+import pymongo
 import random
 import requests
 import sys
 import time
 
-import logging
-
+# geolocation lib
 from geopy.geocoders import Nominatim
-from telegram.ext import Updater, CommandHandler, BaseFilter
+
+# telegram python wrapper
+from telegram import (ReplyKeyboardMarkup, ReplyKeyboardRemove)
+from telegram.ext import (Updater, CommandHandler, ConversationHandler,
+                          Filters, PicklePersistence,
+                          MessageHandler)
 import telegram.ext
 
-DARKYSKY = "https://api.darksky.net/forecast"
+# Token filename
+TELEGRAM_TOKEN = "token_telegram_API.txt"
 
-# "Trouw": "https://www.trouw.nl/voorpagina/rss.xml"
+# Weather API tokenfile, URL
+DARKYSKY = "https://api.darksky.net/forecast"
+DARKSKY_TOKEN = "token_DARKSKY_API.txt"
+
+# Conversation states
+CHOICE, UPDATE = range(2)
+
+# Pickle file
+pickle_file = "bierlijst.pickle"
+
+# Newsfeed update interval
+TIMED_INTERVAL = 900
+
+# links of feeds to output
 FEEDS = {
-# "Volkskrant": "https://www.volkskrant.nl/voorpagina/rss.xml",
-"NRC": "https://www.nrc.nl/rss/",
+"Volkskrant": "https://www.volkskrant.nl/voorpagina/rss.xml",
+"Trouw": "https://www.trouw.nl/voorpagina/rss.xml"
+# "NRC": "https://www.nrc.nl/rss/",
 }
 
-# TODO: schrijf start functie
 def start(update, context):
-    help(update, context)
+    # help(update, context)
+    pass
+
+def hello(update, context):
+    chat_id = update.message.chat_id
+    user = update.message.from_user
+    bot = context.bot
+
+    bot.send_message(chat_id=chat_id, text=f"Hallo {user.first_name}!")
+
+def beer_start(update, context):
+    """ starts the beer conversation, replying a keyboard with options"""
+    chat_id = update.message.chat_id
+    bot = context.bot
+
+    reply_keyboard = [["Krijgen" , "Geven", "Nog te krijgen?", "Nog te geven?"]]
+    msg = emoji.emojize(":beer:")
+    msg += " Geef aan wat je wilt! "
+    msg += emoji.emojize(":beer:")
+
+    bot.send_message(chat_id=chat_id, text=msg,
+                     parse_mode=telegram.ParseMode.MARKDOWN,
+                     reply_markup=ReplyKeyboardMarkup(reply_keyboard,
+                                                      one_time_keyboard=True))
+    return CHOICE
+
+def beer_choice(update, context):
+    """ based on user input from the reply keyboard,
+        gives either output from the mongodb or lets the user change entries """
+    chat_id = update.message.chat_id
+    bot = context.bot
+
+    text = update.message.text
+
+    if text == "Nog te krijgen?" or text == "Nog te geven?":
+
+        msg = beer_output_data(chat_id, text)
+        bot.send_message(chat_id=chat_id, text=msg,
+                         parse_mode=telegram.ParseMode.MARKDOWN,
+                         reply_markup=ReplyKeyboardRemove())
+
+        return ConversationHandler.END
+
+    elif text == "Krijgen" or text == "Geven":
+
+        msg = "Geef de naam van de persoon en het aantal."
+
+        context.user_data["choice"] = text
+
+        bot.send_message(chat_id=chat_id, text=msg,
+                         parse_mode=telegram.ParseMode.MARKDOWN,
+                         reply_markup=ReplyKeyboardRemove())
+
+        return UPDATE
+
+    else:
+        msg = "Sorry, maar dit kan niet."
+        bot.send_message(chat_id=chat_id, text=msg,
+                         parse_mode=telegram.ParseMode.MARKDOWN)
+
+        return ConversationHandler.END
+
+def beer_update(update, context):
+
+    chat_id = update.message.chat_id
+    bot = context.bot
+    text = update.message.text
+
+    choice = context.user_data["choice"]
+    del context.user_data["choice"]
+
+    try:
+        arg = text.split(" ")
+
+        if len(arg) == 2:
+            name, number = arg
+            name.capwords()
+            opt = None
+        else:
+            name, number, opt = arg
+
+        assert(number.isdigit())
+        # print(name, number, opt)
+
+    except:
+        msg = "Sorry, maar dit kan niet."
+        bot.send_message(chat_id=chat_id, text=msg,
+                         parse_mode=telegram.ParseMode.MARKDOWN)
+
+        return ConversationHandler.END
+
+    myclient = pymongo.MongoClient()
+    beer_base = myclient["beerbase"][str(chat_id)]
+    query = {"name": name}
+
+    out = beer_base.find_one(query)
+
+    # check if exist in database, if not
+    if out is None and opt is None:
+        entry = {"type": choice, "name": name, "number": number}
+        beer_base.insert_one(entry)
+
+        msg = "Top, toegevoegd."
+
+    else:
+        # if it does check whether operator was given
+        if opt is None:
+            msg = "Staat al in de database, geef me een optie (+ of -)."
+
+        elif opt == '+' or opt == '-':
+            operators = { "+": operator.add, "-": operator.sub }
+            new_num = operators[opt](int(out["number"]), int(number))
+
+            if new_num <= 0:
+                beer_base.delete_one(query)
+                msg = "Je krijgt geen bier meer van *" + name + "*."
+            else:
+
+                # update entry
+                update_entry = {"type": choice, "name": name,
+                                "number": str(new_num)}
+                beer_base.update(query, update_entry)
+
+                msg = ("Geupdate, Je krijgt " + str(new_num) + " " +
+                      str(emoji.emojize(":beer:")) + " van" +
+                      " *" + name + "*.\n")
+        else:
+            msg = "Sorry, maar dit kan niet."
+
+    bot.send_message(chat_id=chat_id, text=msg,
+                     parse_mode=telegram.ParseMode.MARKDOWN)
+
+    return ConversationHandler.END
+
+def beer_output_data(chat_id, key):
+
+    if "krijgen" in key:
+        key = "Krijgen"
+    else:
+        key = "Geven"
+
+    myclient = pymongo.MongoClient()
+    beer_base = myclient["beerbase"][str(chat_id)]
+    query = {"type": key}
+    # query
+    out = beer_base.find_one(query)
+
+    if out is None and key == "Krijgen":
+        s = "Je krijgt bier van niemand helaas. Mag wel."
+    elif out is None and key == "Geven":
+        s = "Je hoeft geen bier aan iemand te geven. Mag wel."
+
+    else:
+        out = beer_base.find(query)
+        s = ""
+        # print(out)
+
+        for elem in out:
+
+            # print(elem)
+
+            if key == "Krijgen":
+                s += ("Je krijgt " + elem['number'] + " " +
+                      str(emoji.emojize(":beer:")) + " van" +
+                      " *" + elem['name'] + "*.\n")
+            if key == "Geven":
+                s += ("Je bent " + elem['number'] + " " +
+                      str(emoji.emojize(":beer:")) + " verschuldigd aan" +
+                      " *" + elem['name'] + "*.\n")
+
+    return s
+
+def done(update, context):
+
+    bot = context.bot
+    user = update.message.from_user
+
+    if "choice" in context.user_data:
+        del context.user_data["choice"]
+
+    msg = "Joe! Dank voor de input!"
+    bot.send_message(chat_id=update.message.chat_id, text=msg,
+                     parse_mode=telegram.ParseMode.MARKDOWN,
+                     reply_markup=ReplyKeyboardRemove())
+
+    return ConversationHandler.END
 
 def help(update, context):
     """ displays a help message (Dutch) """
 
+    bot = context.bot
     msg = """ Deze bot heeft de volgende *commandos*:
     - /help : laat dit bericht zien
     - /weer _[locatie]_ : geeft weer terug op locatie
     - /hallo : krijg een groet van deze bot
     - /waarom : krijg een willekeurige reden terug
     """
-    update.send_message(chat_id=context.message.chat_id, text=msg,
-                     parse_mode=telegram.ParseMode.MARKDOWN)
 
-def hello(update, context):
-    telegram_user = context.message.from_user
-    context.message.reply_text(f"Hallo {telegram_user.first_name}!")
-
-    # bot.send_message(chat_id=update.message.chat_id,
-    #              text="*bold* _italic_ `fixed width font` [link](http://google.com).",
-    #              parse_mode=telegram.ParseMode.MARKDOWN)
+    bot.send_message(chat_id=update.message.chat_id, text=msg,
+                        parse_mode=telegram.ParseMode.MARKDOWN)
 
 def weather(update, context):
-    chat_id = context.message.chat_id
+    chat_id = update.message.chat_id
+    bot = context.bot
 
-    #board = ['Amsterdam','Anders']
-    # kb = [[telegram.KeyboardButton('Amsterdam')]]
+    #board = ["Amsterdam","Anders"]
+    # kb = [[telegram.KeyboardButton("Amsterdam")]]
     # kb, one_time_keyboard=True
 
     # reply_markup=kb_markup
 
     try:
-        location_str = context.args
-        assert(location_str, str)
+        location_str = context.args[0]
 
     except:
-        update.send_message(chat_id=chat_id, text="Geen locatie gegeven. Standaard: Amsterdam")
+        bot.send_message(chat_id=chat_id,
+                         text="Geen geldige/lege query. Standaard: Amsterdam")
+
         location_str = "Amsterdam"
 
     # get coordinates for DARKSKY based on string
@@ -85,57 +292,72 @@ def weather(update, context):
         return
 
     # get token for Darksky
-    with open('darkskytoken.txt') as file:
+    with open(DARKSKY_TOKEN) as file:
         token = file.readline().strip()
 
     URL = (DARKYSKY + "/" + token + "/" + str(location.latitude)
-           + "," + str(location.longitude) + '?lang=nl&units=si')
+           + "," + str(location.longitude) + "?lang=nl&units=si")
     response = requests.get(URL)
+
+    if response is None:
+        bot.send_message(chat_id=chat_id, text="Kan niet verbinden met API.")
     out = format_weather(location, response.json())
 
-    update.send_message(chat_id=context.message.chat_id,
+    bot.send_message(chat_id=update.message.chat_id,
                      text=out,
                      parse_mode=telegram.ParseMode.MARKDOWN)
 
 def format_weather(location, response):
-    """ pulls wanted variables from JASON-object return by the DARK-SKY API,
+    """ pulls wanted variables from JSON-object return by the DARK-SKY API,
         gives back formatted string (Dutch)"""
 
-    maxTemp = response['daily']['data'][0]['apparentTemperatureHigh']
-    minTemp = response['daily']['data'][0]['apparentTemperatureLow']
-    precipProb = response['daily']['data'][0]['precipProbability']*100
-    precipType = response['daily']['data'][0]['precipType']
-    precipIntensity = response['daily']['data'][0]['precipIntensity']
+    try:
+        daily = response.get("daily")
+        daily_data = daily.get("data")[0]
 
-    s = ''
-    s += 'Locatie: ' + str(location) + '\n\n'
-    s += (response['daily']['summary'] + ' ' +
-          response['daily']['data'][0]['summary'] + '\n\n')
+    except KeyError as e:
+        return ""
+    except IndexError as e:
+        return ""
 
-    s += icon_helper(response['daily']['icon']) + '\n\n'
+    maxTemp = daily_data.get("apparentTemperatureHigh")
+    minTemp = daily_data.get("apparentTemperatureLow")
 
-    s += ('Maximum Temperatuur: ' + str(maxTemp) + ' °C\n'
-          + 'Minimum Temperatuur: ' + str(minTemp) + ' °C')
+    precipProb = daily_data.get("precipProbability")
+    precipType = daily_data.get("precipType")
+    precipIntensity = daily_data.get("precipIntensity")
 
-    if precipIntensity:
+    # prevent errors
+    if not precipIntensity:
+        precipIntensity = 0
 
-        if  precipType == 'rain':
-            s += '\nRegenkans: '
-        elif precipType == 'snow':
-            s += '\nSneeuwkans: '
-        elif precipType == 'sleet':
-            s += '\nHagelkans: '
+    if precipProb:
+        precipProb *= 100
 
-        s += str(precipProb) + '%\n\n'
+    s = ""
+    s += "Locatie: " + str(location) + "\n\n"
+    s += (daily.get("summary") + " " +
+          daily_data.get("summary") + "\n\n")
+
+    s += icon_helper(daily.get("icon")) + "\n\n"
+
+    s += ("Maximum Temperatuur: " + str(maxTemp) + " °C\n"
+          + "Minimum Temperatuur: " + str(minTemp) + " °C\n\n")
+
+    if precipType:
+
+        if  precipType == "rain":
+            s += "\nRegenkans: "
+        elif precipType == "snow":
+            s += "\nSneeuwkans: "
+        elif precipType == "sleet":
+            s += "\nHagelkans: "
+
+        s += str(precipProb) + "%\n\n"
 
     # take avarage temp for day
     Temp = (maxTemp + minTemp)/2
-
-    # prevent errors
-    if precipIntensity == None:
-        precipIntensity = 0
-
-    s += 'Kledingadvies: \n' + clothing_advice(Temp, precipProb, precipIntensity)
+    s += "Kledingadvies: \n" + clothing_advice(Temp, precipProb, precipIntensity)
 
     return s
 
@@ -144,32 +366,32 @@ def clothing_advice(temperature, precipProb, precipIntensity):
         gives clothing advice based on precipation (Dutch)"""
     if precipProb > 70.0 or precipIntensity > 0.05:
         if temperature < 9:
-            return 'Winterjas'
+            return "Winterjas"
         elif temperature < 15:
-            return 'Dunne regenjas'
+            return "Dunne regenjas"
         elif temperature < 19:
-            return 'Regenjas'
+            return "Regenjas"
         elif temperature < 26:
-            return 'T-shirt aan maar wel paraplu mee';
-        return 'Het is zo warm, een verfrissende bui kan geen kwaad'
+            return "T-shirt aan maar wel paraplu mee";
+        return "Het is zo warm, een verfrissende bui kan geen kwaad"
     else:
         if temperature < 9:
-            return 'Winterjas'
+            return "Winterjas"
         elif temperature < 15:
-            return 'Dikke trui'
+            return "Dikke trui"
         elif temperature < 19:
-            return 'Dunne trui of een t-shirt met lange mouwen'
+            return "Dunne trui of een t-shirt met lange mouwen"
         elif temperature < 26:
-            return 'T-shirt'
+            return "T-shirt"
 
-        return 'zo weinig mogelijk kleren lol'
+        return "zo weinig mogelijk kleren lol"
 
 def icon_helper(s):
     """ returns the appropriate emoticon for a weather condition """
 
     # using emoji package to convert string to unicode
     return {
-        "clear-day" : emoji.emojize(":sunny:"),
+         "clear-day" : emoji.emojize(":sunny:"),
          "clear-night" : emoji.emojize(":full_moon:"),
          "rain" : emoji.emojize(":cloud_with_rain:"),
          "snow" : emoji.emojize(":cloud_with_snow: "),
@@ -181,85 +403,54 @@ def icon_helper(s):
          "partly-cloudy-night" : emoji.emojize(":white_sun_behind_cloud:")
     }.get(s, emoji.emojize(":earth_africa:"))
 
-
-# TODO: finish news function
-def get_news(update, context):
+def news(context):
     """ https://pythonhosted.org/feedparser/introduction.html"""
 
-    times_parsed = [[]]*len(FEEDS)
-    publish_times = set()
+    saved_titles = [collections.deque(maxlen=50) for i in range(len(FEEDS))]
 
+    context.job.run_repeating(get_news_rep, interval= TIMED_INTERVAL, first=0,
+                            context=saved_titles)
+
+def get_news_rep(context):
+
+    bot = context.bot
+    queue_titles_list = job.context
     # get the oldest pubdate of each RSS feed
     for i, feed in enumerate(FEEDS):
 
+        queue_titles = queue_titles_list[i]
+
         try:
+
             fd = feedparser.parse(FEEDS[feed])
-            # print(fd.status)
 
+            i = 0
+            # loop over the feed
             for entry in fd.entries:
-                publish_times.add(entry.published_parsed)
 
-            times_parsed[i] = min(publish_times)
+                # print(i)
+                i+=1
 
-            print(f"RSS feed {feed} is {len(fd.entries)} long.")
+                if entry.title in queue_titles:
+                    continue
+
+                # print(entry.title)
+                queue_titles.appendleft(entry.title)
+
+                out = format_rss(feed, entry)
+                # print(out)
+
+                update.send_message(chat_id="@dutch_news", text=out,
+                                    disable_web_page_preview=True,
+                                    parse_mode=telegram.ParseMode.MARKDOWN)
 
         except Exception as e:
             print(e)
 
-    # keep reading feeds
-    for i, feed in enumerate(FEEDS):
-
-        # get the feed and update the pub time
-        pud_dates[i] = get_feed(update, context, FEEDS[feed],
-                                times_parsed[i])
-
-    print(f"sleeping {UPDATE_FREQ}")
-    time.sleep(UPDATE_FREQ)
-
-# TODO: see above, finish news function
-def get_feed(update, context, feedlink, pub_time):
-    """ returns the new article of a given rss feed with a etag and modified tag """
-
-    newfound = False
-
-    try:
-
-        feed = feedparser.parse(feedlink)
-        # print(feed.status)
-
-        # loop over the feed
-        for entry in feed.entries:
-
-            # skip if entry is before last pubdate
-            if entry.published_parsed > pub_time:
-
-                newfound = True
-                out = format_rss(entry)
-
-                # output
-                update.message.reply_text(f"{out}", parse_mode='markdown',
-                                          disable_web_page_preview=True)
-
-            else:
-                continue
-
-            time.sleep(1)
-
-            # grab the last published time
-            pubdate = entry.published_parsed
-
-        if not newfound:
-            print('geen nieuwe artikelen bij deze check.')
-
-        return pubdate
-
-    except Exception as e:
-        print(e)
-
-def format_rss(text):
+def format_rss(feed, text):
     """ does some nice markup for the RSS feed """
     s = ""
-    s += ('*' + text.title + '*' + '\n\n' + text.summary + '\n\n' +
+    s += ("*" + feed + text.title + "*" + "\n\n" + text.summary + "\n\n" +
          text.link)
     return s
 
@@ -269,39 +460,58 @@ def view_feeds(update, context):
 
 def why(update, context):
 
+    bot = context.bot
     # return a random reason from file
-    with open('redenen.txt') as file:
+    with open("redenen.txt") as file:
         lines = file.readlines()
         t = random.choice(lines)
 
-    context.message.reply_text(t)
+        bot.send_message(chat_id=update.message.chat_id, text=t,
+                         parse_mode=telegram.ParseMode.MARKDOWN)
 
 def main():
-    """ Create the updater and pass it your bot's token
+    """ Create the updater and pass it your bot"s token
         and add the handlers to the bot. """
 
     # token is in other file for security
-    with open('telegramtoken.txt') as file:
+    with open(TELEGRAM_TOKEN) as file:
         t = file.readline().strip()
 
-    updater = Updater(token=t)
+    # pp = PicklePersistence(filename="bierlijst.pickle")
+    updater = Updater(token=t, use_context=True) # persistence=pp,
+
     dp = updater.dispatcher
 
     # log errors
-    logging.basicConfig(
-        format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-        level=logging.INFO)
+    logging.basicConfig(format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+                        level=logging.INFO)
 
-    dp.add_handler(CommandHandler('feeds', view_feeds))
-    dp.add_handler(CommandHandler('help', help))
-    dp.add_handler(CommandHandler('hallo', hello))
-    dp.add_handler(CommandHandler('news', get_news))
-    dp.add_handler(CommandHandler('waarom', why))
-    dp.add_handler(CommandHandler('weer', weather))
+    beer_conv = ConversationHandler(
+                    entry_points=[CommandHandler("bier", beer_start)],
+                    states={
+                        CHOICE: [MessageHandler(Filters.text, beer_choice)],
+                        UPDATE: [MessageHandler(Filters.text, beer_update)],
+                    },
+
+                    fallbacks=[CommandHandler("klaar", done)],
+
+                    name="Bierversatie",
+                    # per_user=True,
+                    # persistent=True
+    )
+    dp.add_handler(beer_conv)
+
+    dp.add_handler(CommandHandler("feeds", view_feeds))
+    dp.add_handler(CommandHandler("help", help))
+    dp.add_handler(CommandHandler("hallo", hello))
+    dp.add_handler(CommandHandler("news", news, filters=Filters.user(username="@superpim")))
+    dp.add_handler(CommandHandler("waarom", why))
+    dp.add_handler(CommandHandler("weer", weather))
+
 
     # updater.add_error_handler(error)
     updater.start_polling()
     updater.idle()
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

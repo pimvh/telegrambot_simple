@@ -46,6 +46,9 @@ TELEGRAM_TOKEN = "tokens/token_telegram_API.txt"
 DARKYSKY = "https://api.darksky.net/forecast"
 DARKSKY_TOKEN = "tokens/token_DARKSKY_API.txt"
 
+# Admin
+ADMIN = "ADMIN.txt"
+
 # Conversation states
 CHOICE, UPDATE = range(2)
 
@@ -478,6 +481,9 @@ def main():
     with open(TELEGRAM_TOKEN) as file:
         t = file.readline().strip()
 
+    with open(ADMIN) as file:
+        admin = file.readline().strip()
+
     # pp = PicklePersistence(filename="bierlijst.pickle")
     updater = Updater(token=t, use_context=True) # persistence=pp,
 
@@ -505,7 +511,7 @@ def main():
     dp.add_handler(CommandHandler("feeds", view_feeds))
     dp.add_handler(CommandHandler("help", help))
     dp.add_handler(CommandHandler("hallo", hello))
-    dp.add_handler(CommandHandler("news", news, filters=Filters.user(username="@superpim")))
+    dp.add_handler(CommandHandler("news", news, filters=Filters.user(username=admin)))
     dp.add_handler(CommandHandler("waarom", why))
     dp.add_handler(CommandHandler("weer", weather))
 

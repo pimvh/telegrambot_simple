@@ -50,7 +50,7 @@ DARKSKY_TOKEN = "tokens/token_DARKSKY_API.txt"
 ADMIN = "ADMIN.txt"
 
 # Conversation states
-CHOICE, UPDATE = range(2)
+CHOICE, NAME, NUM, UPDATE = range(4)
 
 # Pickle file
 pickle_file = "bierlijst.pickle"
@@ -126,7 +126,7 @@ def beer_choice(update, context):
 
     elif text == "Krijgen" or text == "Geven":
 
-        msg = "Geef de naam van de persoon en het aantal."
+        msg = "Geef de naam van de persoon."
 
         context.user_data["choice"] = text
 
@@ -134,7 +134,7 @@ def beer_choice(update, context):
                          parse_mode=telegram.ParseMode.MARKDOWN,
                          reply_markup=ReplyKeyboardRemove())
 
-        return UPDATE
+        return NAME
 
     else:
         msg = "Sorry, maar dit kan niet."
@@ -143,32 +143,76 @@ def beer_choice(update, context):
 
         return ConversationHandler.END
 
-def beer_update(update, context):
-
+def beer_name(update, context):
     chat_id = update.message.chat_id
     bot = context.bot
     text = update.message.text
 
-    choice = context.user_data["choice"]
-    del context.user_data["choice"]
+    context.user_data["name"] = text.capitalize()
+
+    reply_keyboard = [["1", "2", "3", "4", "5"]]
+    msg = "Hoeveel?"
+
+    bot.send_message(chat_id=chat_id, text=msg,
+                     parse_mode=telegram.ParseMode.MARKDOWN,
+                     reply_markup=ReplyKeyboardMarkup(reply_keyboard,
+                                                      one_time_keyboard=True))
+
+    return NUM
+
+def beer_num(update, context):
+    chat_id = update.message.chat_id
+    bot = context.bot
+    text = update.message.text
 
     try:
-        arg = text.split(" ")
+        assert(text.isdigit())
 
-        if len(arg) == 2:
-            name, number = arg
-            name.capwords()
-            opt = None
-        else:
-            name, number, opt = arg
-
-        assert(number.isdigit())
-        # print(name, number, opt)
+        context.user_data["number"] = text
 
     except:
         msg = "Sorry, maar dit kan niet."
         bot.send_message(chat_id=chat_id, text=msg,
-                         parse_mode=telegram.ParseMode.MARKDOWN)
+                         parse_mode=telegram.ParseMode.MARKDOWN,
+                         reply_markup=ReplyKeyboardRemove())
+        return ConversationHandler.END
+
+    context.user_data["number"] = text
+
+    reply_keyboard = [["+", "-"]]
+    msg = "+ of -?"
+
+    bot.send_message(chat_id=chat_id, text=msg,
+                     parse_mode=telegram.ParseMode.MARKDOWN,
+                     reply_markup=ReplyKeyboardMarkup(reply_keyboard,
+                                                      one_time_keyboard=True))
+
+    return UPDATE
+
+def beer_update(update, context):
+
+    chat_id = update.message.chat_id
+    bot = context.bot
+    op = update.message.text
+
+    choice = context.user_data["choice"]
+    del context.user_data["choice"]
+
+    name = context.user_data["name"]
+    del context.user_data["name"]
+
+    number = context.user_data["number"]
+    del context.user_data["number"]
+
+    try:
+
+        assert(op == '+' or op == '-')
+
+    except:
+        msg = "Sorry, maar dit kan niet."
+        bot.send_message(chat_id=chat_id, text=msg,
+                         parse_mode=telegram.ParseMode.MARKDOWN,
+                         reply_markup=ReplyKeyboardRemove())
 
         return ConversationHandler.END
 
@@ -178,40 +222,66 @@ def beer_update(update, context):
 
     out = beer_base.find_one(query)
 
-    # check if exist in database, if not
-    if out is None and opt is None:
+    # check if exist in database, if not add
+    if out is None:
+        if op == '-':
+            msg = "Geen negatieve aantallen bier aub."
+            bot.send_message(chat_id=chat_id, text=msg,
+                             parse_mode=telegram.ParseMode.MARKDOWN,
+                             reply_markup=ReplyKeyboardRemove())
+            return ConversationHandler.END
+
         entry = {"type": choice, "name": name, "number": number}
         beer_base.insert_one(entry)
 
-        msg = "Top, toegevoegd."
+        msg = f"{name} stond nog niet in de database, ik heb deze persoon toegevoegd.\n"
 
+    # else the name is in there
     else:
-        # if it does check whether operator was given
-        if opt is None:
-            msg = "Staat al in de database, geef me een optie (+ of -)."
 
-        elif opt == '+' or opt == '-':
-            operators = { "+": operator.add, "-": operator.sub }
-            new_num = operators[opt](int(out["number"]), int(number))
+        # if the output is from the other type, we swap the type and the op
+        if not out['type'] == choice:
+            choice = out['type']
 
-            if new_num <= 0:
-                beer_base.delete_one(query)
-                msg = "Je krijgt geen bier meer van *" + name + "*."
-            else:
+            op_flip = {'+' : '-', '-' : '+'}
+            op = op_flip[op]
 
-                # update entry
-                update_entry = {"type": choice, "name": name,
-                                "number": str(new_num)}
-                beer_base.update(query, update_entry)
+        # calculate new number
+        operators = {"+": operator.add, "-": operator.sub}
+        new_num = operators[op](int(out["number"]), int(number))
 
-                msg = ("Geupdate, Je krijgt " + str(new_num) + " " +
-                      str(emoji.emojize(":beer:")) + " van" +
-                      " *" + name + "*.\n")
+        if new_num > 0:
+            # update entry
+            update_entry = {"type": choice, "name": name,
+                            "number": str(new_num)}
+            beer_base.update(query, update_entry)
+
+            msg = (f"Geupdate, {op} {str(new_num)} " +
+                   emoji.emojize(":beer:") +
+                   f"bij *{name}*.")
+
+        elif new_num == 0:
+            beer_base.delete_one(query)
+
+            msg = f"{name} staat nu niet meer in de database."
+
         else:
-            msg = "Sorry, maar dit kan niet."
+            # swap the choices
+            choice_flip = {"Krijgen" : "Geven", "Geven" : "Krijgen"}
+            choice = choice_flip[choice]
+
+            # update entry
+            update_entry = {"type": choice, "name": name,
+                            "number": str(abs(new_num))}
+            beer_base.update(query, update_entry)
+
+            msg = (f"Geupdate, {op} {str(abs(new_num))} " +
+                   str(emoji.emojize(":beer:")) +
+                   f"bij *{name}*.")
 
     bot.send_message(chat_id=chat_id, text=msg,
-                     parse_mode=telegram.ParseMode.MARKDOWN)
+                     parse_mode=telegram.ParseMode.MARKDOWN,
+                     reply_markup=ReplyKeyboardRemove())
 
     return ConversationHandler.END
 
@@ -260,6 +330,12 @@ def done(update, context):
 
     if "choice" in context.user_data:
         del context.user_data["choice"]
+
+    if "name" in context.user_data:
+        del context.user_data["name"]
+
+    if "number" in context.user_data:
+        del context.user_data["number"]
 
     msg = "Joe! Dank voor de input!"
     bot.send_message(chat_id=update.message.chat_id, text=msg,
@@ -459,8 +535,8 @@ def format_rss(feed, text):
     return s
 
 def view_feeds(update, context):
-    mes = "This bot pulls from the following feeds: "
-    update.message.reply_text(mes + f"\n {FEEDS.keys()}")
+    mes = f"This bot pulls from the following feeds:\n{FEEDS.keys()} "
+    update.message.reply_text(mes)
 
 def why(update, context):
 
@@ -484,7 +560,6 @@ def main():
     with open(ADMIN) as file:
         admin = file.readline().strip()
 
-    # pp = PicklePersistence(filename="bierlijst.pickle")
     updater = Updater(token=t, use_context=True) # persistence=pp,
 
     dp = updater.dispatcher
@@ -497,6 +572,8 @@ def main():
                     entry_points=[CommandHandler("bier", beer_start)],
                     states={
                         CHOICE: [MessageHandler(Filters.text, beer_choice)],
+                        NAME: [MessageHandler(Filters.text, beer_name)],
+                        NUM: [MessageHandler(Filters.text, beer_num)],
                         UPDATE: [MessageHandler(Filters.text, beer_update)],
                     },
 
@@ -504,10 +581,8 @@ def main():
 
                     name="Bierversatie",
                     # per_user=True,
-                    # persistent=True
     )
     dp.add_handler(beer_conv)
-
     dp.add_handler(CommandHandler("feeds", view_feeds))
     dp.add_handler(CommandHandler("help", help))
     dp.add_handler(CommandHandler("hallo", hello))

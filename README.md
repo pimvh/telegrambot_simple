@@ -1,6 +1,6 @@
-# telegrambot_simple
+# Simple Telegram Bot
 Implements a simple telegram bot based using the  python-telegram-bot wrapper.
-It responses are written in Dutch, but its in code in English for accessibility.
+It responses are written in Dutch, but it's in code in English for accessibility.
 
 The module below implements a telegram bot with a number of Command Handlers:
 - /help: help (displays a help message)

@@ -3,3 +3,6 @@
 *.txt
 *.jpg
 *.bash
+
+# Track reasons
+!redenen.txt

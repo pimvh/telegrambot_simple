@@ -21,8 +21,7 @@ import emoji
 import feedparser
 from functools import wraps
 import logging
-import operator
-import pickle
+import os
 import pymongo
 import random
 import requests
@@ -35,25 +34,27 @@ from geopy.geocoders import Nominatim
 # telegram python wrapper
 from telegram import (ReplyKeyboardMarkup, ReplyKeyboardRemove)
 from telegram.ext import (Updater, CommandHandler, ConversationHandler,
-                          Filters, PicklePersistence,
-                          MessageHandler)
+                          Filters, MessageHandler)
 import telegram.ext
 
+#
+DIR = os.path.dirname(__file__)
+
 # Token filename
-TELEGRAM_TOKEN = "tokens/token_telegram_API.txt"
+TELEGRAM_TOKEN = os.path.join(DIR, 'tokens', 'token_telegram_API.txt')
 
 # Weather API tokenfile, URL
 DARKYSKY = "https://api.darksky.net/forecast"
-DARKSKY_TOKEN = "tokens/token_DARKSKY_API.txt"
+DARKSKY_TOKEN = os.path.join(DIR, 'tokens', 'token_DARKSKY_API.txt')
+
+# Reasons
+REASONS = os.path.join(DIR, 'redenen.txt')
 
 # Admin
-ADMIN = "ADMIN.txt"
+ADMIN = os.path.join(DIR, 'ADMIN.txt')
 
 # Conversation states
-CHOICE, NAME, NUM, UPDATE = range(4)
-
-# Pickle file
-pickle_file = "bierlijst.pickle"
+CHOICE, NAME, UPDATE = range(3)
 
 # Newsfeed update interval
 TIMED_INTERVAL = 900
@@ -96,7 +97,7 @@ def beer_start(update, context):
     chat_id = update.message.chat_id
     bot = context.bot
 
-    reply_keyboard = [["Krijgen" , "Geven", "Nog te krijgen?", "Nog te geven?"]]
+    reply_keyboard = [["Krijgen van" , "Geven aan", "Nog te krijgen?", "Nog te geven?"]]
     msg = emoji.emojize(":beer:")
     msg += " Geef aan wat je wilt! "
     msg += emoji.emojize(":beer:")
@@ -112,23 +113,22 @@ def beer_choice(update, context):
         gives either output from the mongodb or lets the user change entries """
     chat_id = update.message.chat_id
     bot = context.bot
-
     text = update.message.text
 
     if text == "Nog te krijgen?" or text == "Nog te geven?":
 
-        msg = beer_output_data(chat_id, text)
+        msg = beer_output_data(chat_id, text[7])
         bot.send_message(chat_id=chat_id, text=msg,
                          parse_mode=telegram.ParseMode.MARKDOWN,
                          reply_markup=ReplyKeyboardRemove())
 
         return ConversationHandler.END
 
-    elif text == "Krijgen" or text == "Geven":
+    elif text == "Krijgen van" or text == "Geven aan":
 
         msg = "Geef de naam van de persoon."
 
-        context.user_data["choice"] = text
+        context.user_data["choice"] = text[0]
 
         bot.send_message(chat_id=chat_id, text=msg,
                          parse_mode=telegram.ParseMode.MARKDOWN,
@@ -158,17 +158,17 @@ def beer_name(update, context):
                      reply_markup=ReplyKeyboardMarkup(reply_keyboard,
                                                       one_time_keyboard=True))
 
-    return NUM
+    return UPDATE
 
-def beer_num(update, context):
+def beer_update(update, context):
+
     chat_id = update.message.chat_id
     bot = context.bot
     text = update.message.text
 
     try:
         assert(text.isdigit())
-
-        context.user_data["number"] = text
+        number = int(text)
 
     except:
         msg = "Sorry, maar dit kan niet."
@@ -176,24 +176,6 @@ def beer_num(update, context):
                          parse_mode=telegram.ParseMode.MARKDOWN,
                          reply_markup=ReplyKeyboardRemove())
         return ConversationHandler.END
-
-    context.user_data["number"] = text
-
-    reply_keyboard = [["+", "-"]]
-    msg = "+ of -?"
-
-    bot.send_message(chat_id=chat_id, text=msg,
-                     parse_mode=telegram.ParseMode.MARKDOWN,
-                     reply_markup=ReplyKeyboardMarkup(reply_keyboard,
-                                                      one_time_keyboard=True))
-
-    return UPDATE
-
-def beer_update(update, context):
-
-    chat_id = update.message.chat_id
-    bot = context.bot
-    op = update.message.text
 
     choice = context.user_data["choice"]
     del context.user_data["choice"]
@@ -201,64 +183,36 @@ def beer_update(update, context):
     name = context.user_data["name"]
     del context.user_data["name"]
 
-    number = context.user_data["number"]
-    del context.user_data["number"]
-
-    try:
-
-        assert(op == '+' or op == '-')
-
-    except:
-        msg = "Sorry, maar dit kan niet."
-        bot.send_message(chat_id=chat_id, text=msg,
-                         parse_mode=telegram.ParseMode.MARKDOWN,
-                         reply_markup=ReplyKeyboardRemove())
-
-        return ConversationHandler.END
-
     myclient = pymongo.MongoClient()
     beer_base = myclient["beerbase"][str(chat_id)]
     query = {"name": name}
 
     out = beer_base.find_one(query)
 
+    if choice == "G":
+        number*=-1
+
     # check if exist in database, if not add
     if out is None:
-        if op == '-':
-            msg = "Geen negatieve aantallen bier aub."
-            bot.send_message(chat_id=chat_id, text=msg,
-                             parse_mode=telegram.ParseMode.MARKDOWN,
-                             reply_markup=ReplyKeyboardRemove())
-            return ConversationHandler.END
 
-        entry = {"type": choice, "name": name, "number": number}
+        entry = {"name": name, "number": number}
         beer_base.insert_one(entry)
 
         msg = f"{name} stond nog niet in de database, ik heb deze persoon toegevoegd.\n"
 
     # else the name is in there
     else:
-
-        # if the output is from the other type, we swap the type and the op
-        if not out['type'] == choice:
-            choice = out['type']
-
-            op_flip = {'+' : '-', '-' : '+'}
-            op = op_flip[op]
-
         # calculate new number
-        operators = {"+": operator.add, "-": operator.sub}
-        new_num = operators[op](int(out["number"]), int(number))
 
+        new_num = out["number"] + number
+
+        print(out["number"], number, new_num)
         if new_num > 0:
             # update entry
-            update_entry = {"type": choice, "name": name,
-                            "number": str(new_num)}
+            update_entry = {"name": name, "number": new_num}
             beer_base.update(query, update_entry)
 
-            msg = (f"Geupdate, {op} {str(new_num)} " +
-                   emoji.emojize(":beer:") +
-                   f"bij *{name}*.")
+            msg = emoji.emoize(f"Geupdate, nu {str(new_num)} :beer: bij *{name}*.")
 
         elif new_num == 0:
             beer_base.delete_one(query)
@@ -267,17 +221,14 @@ def beer_update(update, context):
 
         else:
             # swap the choices
-            choice_flip = {"Krijgen" : "Geven", "Geven" : "Krijgen"}
-            choice = choice_flip[choice]
 
             # update entry
-            update_entry = {"type": choice, "name": name,
-                            "number": str(abs(new_num))}
+            update_entry = {"name": name, "number": new_num}
             beer_base.update(query, update_entry)
 
-            msg = (f"Geupdate, {op} {str(abs(new_num))} " +
+            msg = (f"Geupdate, nu {str(new_num)} " +
                    str(emoji.emojize(":beer:")) +
-                   f"bij *{name}*.")
+                   f" bij *{name}*.")
 
     bot.send_message(chat_id=chat_id, text=msg,
                      parse_mode=telegram.ParseMode.MARKDOWN,
@@ -287,39 +238,34 @@ def beer_update(update, context):
 
 def beer_output_data(chat_id, key):
 
-    if "krijgen" in key:
-        key = "Krijgen"
-    else:
-        key = "Geven"
-
     myclient = pymongo.MongoClient()
     beer_base = myclient["beerbase"][str(chat_id)]
-    query = {"type": key}
-    # query
-    out = beer_base.find_one(query)
+    krijgen = False
 
-    if out is None and key == "Krijgen":
-        s = "Je krijgt bier van niemand helaas. Mag wel."
-    elif out is None and key == "Geven":
-        s = "Je hoeft geen bier aan iemand te geven. Mag wel."
-
+    if key == 'k':
+        query = { "number": {"$gt": 0 } }
+        krijgen = True
     else:
-        out = beer_base.find(query)
+        query = { "number": {"$lt": 0 } }
+
+    # query
+    out = beer_base.find(query)
+
+    if out is None:
+        if krijgen:
+            s = "Je krijgt bier van niemand helaas. Mag wel."
+        else:
+            s = "Je hoeft geen bier aan iemand te geven. Mag wel."
+    else:
         s = ""
         # print(out)
 
         for elem in out:
 
-            # print(elem)
-
-            if key == "Krijgen":
-                s += ("Je krijgt " + elem['number'] + " " +
-                      str(emoji.emojize(":beer:")) + " van" +
-                      " *" + elem['name'] + "*.\n")
-            if key == "Geven":
-                s += ("Je bent " + elem['number'] + " " +
-                      str(emoji.emojize(":beer:")) + " verschuldigd aan" +
-                      " *" + elem['name'] + "*.\n")
+            if krijgen:
+                s += emoji.emojize(f"Je krijgt {elem['number']} :beers: van {elem['name']}.\n")
+            else:
+                s += emoji.emojize(f"Je bent {abs(elem['number'])} :beers: verschuldigd aan *{elem['name']}*.\n")
 
     return s
 
@@ -334,9 +280,6 @@ def done(update, context):
     if "name" in context.user_data:
         del context.user_data["name"]
 
-    if "number" in context.user_data:
-        del context.user_data["number"]
-
     msg = "Joe! Dank voor de input!"
     bot.send_message(chat_id=update.message.chat_id, text=msg,
                      parse_mode=telegram.ParseMode.MARKDOWN,
@@ -347,12 +290,6 @@ def done(update, context):
 def weather(update, context):
     chat_id = update.message.chat_id
     bot = context.bot
-
-    #board = ["Amsterdam","Anders"]
-    # kb = [[telegram.KeyboardButton("Amsterdam")]]
-    # kb, one_time_keyboard=True
-
-    # reply_markup=kb_markup
 
     try:
         location_str = context.args[0]
@@ -542,7 +479,7 @@ def why(update, context):
 
     bot = context.bot
     # return a random reason from file
-    with open("redenen.txt") as file:
+    with open(REASONS) as file:
         lines = file.readlines()
         t = random.choice(lines)
 
@@ -573,7 +510,6 @@ def main():
                     states={
                         CHOICE: [MessageHandler(Filters.text, beer_choice)],
                         NAME: [MessageHandler(Filters.text, beer_name)],
-                        NUM: [MessageHandler(Filters.text, beer_num)],
                         UPDATE: [MessageHandler(Filters.text, beer_update)],
                     },
 

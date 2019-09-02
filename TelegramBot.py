@@ -247,15 +247,17 @@ def beer_output_data(chat_id, key):
         query = { "number": {"$lt": 0 } }
 
     # query
-    out = beer_base.find(query)
+    out = beer_base.find_one(query)
+    # print(out)
 
-    if out is None or out = "":
+    if out is None:
         if krijgen:
             s = "Je krijgt bier van niemand helaas. Mag wel."
         else:
             s = "Je hoeft geen bier aan iemand te geven. Mag wel."
     else:
-        # print(out)
+
+        out = beer_base.find(query)
 
         for elem in out:
 

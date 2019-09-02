@@ -246,17 +246,17 @@ def beer_output_data(chat_id, key):
     else:
         query = { "number": {"$lt": 0 } }
 
-    # query
-    out = beer_base.find_one(query)
-    # print(out)
+    # count docs
+    item_count = collection.count_documents(query)
 
-    if out is None:
+    if item_count == 0:
         if krijgen:
             s = "Je krijgt bier van niemand helaas. Mag wel."
         else:
             s = "Je hoeft geen bier aan iemand te geven. Mag wel."
     else:
 
+        # query the database
         out = beer_base.find(query)
 
         for elem in out:

@@ -118,6 +118,7 @@ def beer_choice(update, context):
     if text == "Nog te krijgen?" or text == "Nog te geven?":
 
         msg = beer_output_data(chat_id, text[7])
+        print(msg)
         bot.send_message(chat_id=chat_id, text=msg,
                          parse_mode=telegram.ParseMode.MARKDOWN,
                          reply_markup=ReplyKeyboardRemove())
@@ -247,8 +248,8 @@ def beer_output_data(chat_id, key):
         query = { "number": {"$lt": 0 } }
 
     # count docs
-    item_count = collection.count_documents(query)
-    print(item_count)
+    item_count = beer_base.count_documents(query)
+    print('this is the item count', item_count)
 
     if item_count == 0:
         if krijgen:

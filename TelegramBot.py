@@ -248,6 +248,7 @@ def beer_output_data(chat_id, key):
 
     # count docs
     item_count = collection.count_documents(query)
+    print(item_count)
 
     if item_count == 0:
         if krijgen:

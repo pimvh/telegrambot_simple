@@ -212,7 +212,7 @@ def beer_update(update, context):
             update_entry = {"name": name, "number": new_num}
             beer_base.update(query, update_entry)
 
-            msg = emoji.emoize(f"Geupdate, nu {str(new_num)} :beer: bij *{name}*.")
+            msg = emoji.emojize(f"Geupdate, nu {str(new_num)} :beer: bij *{name}*.")
 
         elif new_num == 0:
             beer_base.delete_one(query)
@@ -226,9 +226,7 @@ def beer_update(update, context):
             update_entry = {"name": name, "number": new_num}
             beer_base.update(query, update_entry)
 
-            msg = (f"Geupdate, nu {str(new_num)} " +
-                   str(emoji.emojize(":beer:")) +
-                   f" bij *{name}*.")
+            msg = emoji.emojize(f"Geupdate, nu {str(new_num)} :beer: bij *{name}*.")
 
     bot.send_message(chat_id=chat_id, text=msg,
                      parse_mode=telegram.ParseMode.MARKDOWN,
@@ -251,13 +249,12 @@ def beer_output_data(chat_id, key):
     # query
     out = beer_base.find(query)
 
-    if out is None:
+    if out is None or out = "":
         if krijgen:
             s = "Je krijgt bier van niemand helaas. Mag wel."
         else:
             s = "Je hoeft geen bier aan iemand te geven. Mag wel."
     else:
-        s = ""
         # print(out)
 
         for elem in out:

@@ -534,12 +534,12 @@ def main():
     dp.add_handler(beer_conv)
     dp.add_handler(CommandHandler("feeds", view_feeds))
     dp.add_handler(CommandHandler("help", help))
-    dp.add_handler(CommandHandler("hallo", hello))
     dp.add_handler(CommandHandler("news", news, filters=Filters.user(username=admin)))
-    dp.add_handler(CommandHandler("waarom", why))
     dp.add_handler(CommandHandler("weer", weather))
 
     dp.add_handler(MessageHandler(leuk_filter, leuk))
+    dp.add_handler(MessageHandler(hello_filter, hello))
+    dp.add_handler(MessageHandler(why_filter, why))
 
     # updater.add_error_handler(error)
     updater.start_polling()
@@ -549,7 +549,17 @@ class LeukFilter(BaseFilter):
     def filter(self, message):
         return 'leuk' in str.lower(message.text)
 
+class HelloFilter(BaseFilter):
+    def filter(self, message):
+        return 'hallo' in str.lower(message.text) or 'hoi' in str.lower(message.text)
+
+class WhyFilter(BaseFilter):
+    def filter(self, message):
+        return 'waarom' in str.lower(message.text)
+
 leuk_filter = LeukFilter()
+hello_filter = HelloFilter()
+why_filter = WhyFilter()
 
 if __name__ == "__main__":
     main()

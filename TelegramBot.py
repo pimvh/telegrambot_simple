@@ -34,10 +34,10 @@ from geopy.geocoders import Nominatim
 # telegram python wrapper
 from telegram import (ReplyKeyboardMarkup, ReplyKeyboardRemove)
 from telegram.ext import (Updater, CommandHandler, ConversationHandler,
-                          Filters, MessageHandler)
+                          BaseFilter, Filters, MessageHandler)
 import telegram.ext
 
-#
+# get the correct DIR
 DIR = os.path.dirname(__file__)
 
 # Token filename
@@ -92,15 +92,31 @@ def hello(update, context):
 
     bot.send_message(chat_id=chat_id, text=f"Hallo {user.first_name}!")
 
+def why(update, context):
+
+    bot = context.bot
+    # return a random reason from file
+    with open(REASONS) as file:
+        lines = file.readlines()
+        t = random.choice(lines)
+
+        bot.send_message(chat_id=update.message.chat_id, text=t,
+                         parse_mode=telegram.ParseMode.MARKDOWN)
+
+def leuk(update, context):
+    chat_id = update.message.chat_id
+    user = update.message.from_user
+    bot = context.bot
+
+    bot.send_message(chat_id=chat_id, text=f"Je bent zelf leuk {user.first_name}!")
+
 def beer_start(update, context):
     """ starts the beer conversation, replying a keyboard with options"""
     chat_id = update.message.chat_id
     bot = context.bot
 
     reply_keyboard = [["Krijgen van" , "Geven aan", "Nog te krijgen?", "Nog te geven?"]]
-    msg = emoji.emojize(":beer:")
-    msg += " Geef aan wat je wilt! "
-    msg += emoji.emojize(":beer:")
+    msg = emoji.emojize(":beer_mug: Geef aan wat je wilt! :beer_mug:")
 
     bot.send_message(chat_id=chat_id, text=msg,
                      parse_mode=telegram.ParseMode.MARKDOWN,
@@ -192,6 +208,13 @@ def beer_update(update, context):
     if choice == "G":
         number*=-1
 
+    if beer_base.count_documents() > 25:
+        msg = "Maat fix ff een andere plek om je bieries bij te houden, niet mijn server volgooien aub."
+        bot.send_message(chat_id=chat_id, text=msg,
+                         parse_mode=telegram.ParseMode.MARKDOWN,
+                         reply_markup=ReplyKeyboardRemove())
+        return ConversationHandler.END
+
     # check if exist in database, if not add
     if out is None:
 
@@ -212,7 +235,7 @@ def beer_update(update, context):
             update_entry = {"name": name, "number": new_num}
             beer_base.update(query, update_entry)
 
-            msg = emoji.emojize(f"Geupdate, nu {str(new_num)} :beer: bij *{name}*.")
+            msg = emoji.emojize(f"Geupdate, nu {str(new_num)} :beer_mug: bij *{name}*.")
 
         elif new_num == 0:
             beer_base.delete_one(query)
@@ -226,7 +249,7 @@ def beer_update(update, context):
             update_entry = {"name": name, "number": new_num}
             beer_base.update(query, update_entry)
 
-            msg = emoji.emojize(f"Geupdate, nu {str(new_num)} :beer: bij *{name}*.")
+            msg = emoji.emojize(f"Geupdate, nu {str(new_num)} :beer_mug: bij *{name}*.")
 
     bot.send_message(chat_id=chat_id, text=msg,
                      parse_mode=telegram.ParseMode.MARKDOWN,
@@ -249,27 +272,27 @@ def beer_output_data(chat_id, key):
     # count docs
     item_count = beer_base.count_documents(query)
     # print('this is the item count', item_count)
+    s=""
 
     if item_count == 0:
         if krijgen:
-            s = "Je krijgt bier van niemand helaas. Mag wel."
+            s = "Je krijgt bier van niemand helaas. Mag wel (:"
         else:
-            s = "Je hoeft geen bier aan iemand te geven. Mag wel."
+            s = "Je hoeft geen bier aan iemand te geven. Mag wel (:"
     else:
-
         # query the database
         out = beer_base.find(query)
 
         for elem in out:
 
             if krijgen:
-                s += emoji.emojize(f"Je krijgt {elem['number']} :beers: van {elem['name']}.\n")
+                s += emoji.emojize(f"Je krijgt {elem['number']} :clinking_beer_mugs: van *{elem['name']}*.\n")
             else:
-                s += emoji.emojize(f"Je bent {abs(elem['number'])} :beers: verschuldigd aan *{elem['name']}*.\n")
+                s += emoji.emojize(f"Je bent {abs(elem['number'])} :clinking_beer_mugs: verschuldigd aan *{elem['name']}*.\n")
 
     return s
 
-def done(update, context):
+def beer_end(update, context):
 
     bot = context.bot
     user = update.message.from_user
@@ -475,17 +498,6 @@ def view_feeds(update, context):
     mes = f"This bot pulls from the following feeds:\n{FEEDS.keys()} "
     update.message.reply_text(mes)
 
-def why(update, context):
-
-    bot = context.bot
-    # return a random reason from file
-    with open(REASONS) as file:
-        lines = file.readlines()
-        t = random.choice(lines)
-
-        bot.send_message(chat_id=update.message.chat_id, text=t,
-                         parse_mode=telegram.ParseMode.MARKDOWN)
-
 def main():
     """ Create the updater and pass it your bot"s token
         and add the handlers to the bot. """
@@ -497,7 +509,7 @@ def main():
     with open(ADMIN) as file:
         admin = file.readline().strip()
 
-    updater = Updater(token=t, use_context=True) # persistence=pp,
+    updater = Updater(token=t, use_context=True)
 
     dp = updater.dispatcher
 
@@ -513,11 +525,12 @@ def main():
                         UPDATE: [MessageHandler(Filters.text, beer_update)],
                     },
 
-                    fallbacks=[CommandHandler("klaar", done)],
+                    fallbacks=[CommandHandler("klaar", beer_end)],
 
                     name="Bierversatie",
                     # per_user=True,
     )
+
     dp.add_handler(beer_conv)
     dp.add_handler(CommandHandler("feeds", view_feeds))
     dp.add_handler(CommandHandler("help", help))
@@ -526,10 +539,17 @@ def main():
     dp.add_handler(CommandHandler("waarom", why))
     dp.add_handler(CommandHandler("weer", weather))
 
+    dp.add_handler(MessageHandler(leuk_filter, leuk))
 
     # updater.add_error_handler(error)
     updater.start_polling()
     updater.idle()
+
+class LeukFilter(BaseFilter):
+    def filter(self, message):
+        return 'leuk' in str.lower(message.text)
+
+leuk_filter = LeukFilter()
 
 if __name__ == "__main__":
     main()

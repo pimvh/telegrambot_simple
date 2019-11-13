@@ -33,9 +33,7 @@ import time
 
 # geolocation lib
 from geopy.geocoders import Nominatim
-
-# numpy
-import numpy as np
+from operator import itemgetter
 
 # telegram python wrapper
 from telegram import (ReplyKeyboardMarkup, ReplyKeyboardRemove)
@@ -494,8 +492,9 @@ def moonphase_icon_helper(s):
                         ":last_quarter_moon:", ":waning_cresent_moon:",
                         ":new_moon:"]
 
-    min_index = np.argmin([abs(lumination_num - num)
-                           for num in phase_num])
+    dist = [abs(lumination_num - num) for num in phase_num]
+    min_index = min(enumerate(dist), key=itemgetter(1))[0]
+
     return emoji.emojize(moon_phase_emojis[min_index])
 
 def news(context):

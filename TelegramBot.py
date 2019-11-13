@@ -17,6 +17,8 @@ __status__ = "Production"
 
 import collections
 import datetime
+
+"""" see: http://www.unicode.org/emoji/charts/full-emoji-list.html for emoji aliases """
 import emoji
 import feedparser
 from functools import wraps
@@ -28,8 +30,12 @@ import requests
 import sys
 import time
 
+
 # geolocation lib
 from geopy.geocoders import Nominatim
+
+# numpy
+import numpy as np
 
 # telegram python wrapper
 from telegram import (ReplyKeyboardMarkup, ReplyKeyboardRemove)
@@ -129,9 +135,9 @@ def yourmom(update, context):
 
     options = [
     "Dat zei je mama gisteren ook.",
-    "Dat zei je moeder gisteren ook.",
+    emoji.emojize("Dat zei je moeder gisteren ook. :woman_raising_hand:"),
     "Ik zou nu een je moeder grap kunnen maken maar ik houd me in.",
-    "Je mama is lief."
+    emoji.emojize("Je mama is lief hoor. :woman_raising_hand:")
     ]
 
     msg = random.choice(options)
@@ -344,7 +350,6 @@ def weather(update, context):
 
     try:
         location_str = context.args[0]
-
     except:
         bot.send_message(chat_id=chat_id,
                          text="Geen geldige/lege query. Standaard: Amsterdam")
@@ -353,7 +358,12 @@ def weather(update, context):
 
     # get coordinates for DARKSKY based on string
     geolocator = Nominatim()
-    location = geolocator.geocode(location_str)
+
+    try:
+        location = geolocator.geocode(location_str)
+    except:
+        bot.send_message(chat_id=chat_id,
+                         text="De Geolocator service doet het ff niet, zoek maar op een normale plek het weer op.")
 
     if location is None:
         bot.send_message(chat_id=chat_id, text="Deze plek bestaat niet, sorry.")
@@ -407,7 +417,10 @@ def format_weather(location, response):
     s += (daily.get("summary") + " " +
           daily_data.get("summary") + "\n\n")
 
-    s += icon_helper(daily.get("icon")) + "\n\n"
+    s += weather_icon_helper(daily.get("icon")) + "\n\n"
+
+    if (daily_data.get("moonPhase")):
+        s += "Maanstand: " + moonphase_icon_helper(daily_data.get("moonPhase")) + "\n\n"
 
     s += ("Maximum Temperatuur: " + str(maxTemp) + " °C\n"
           + "Minimum Temperatuur: " + str(minTemp) + " °C\n\n")
@@ -454,7 +467,7 @@ def clothing_advice(temperature, precipProb, precipIntensity):
 
         return "zo weinig mogelijk kleren lol"
 
-def icon_helper(s):
+def weather_icon_helper(s):
     """ returns the appropriate emoticon for a weather condition """
 
     # using emoji package to convert string to unicode
@@ -469,10 +482,24 @@ def icon_helper(s):
          "cloudy" : emoji.emojize(":cloud:"),
          "partly-cloudy-day" : emoji.emojize(":white_sun_with_small_cloud:"),
          "partly-cloudy-night" : emoji.emojize(":white_sun_behind_cloud:")
+
     }.get(s, emoji.emojize(":earth_africa:"))
 
+def moonphase_icon_helper(s):
+    lumination_num = float(s)
+    phase_num = [0, 0.125, 0.25, 0.375, 0.5, 0.625, 0.75, 0.875, 1]
+    moon_phase_emojis =[":new_moon:", "waxing_cresent_moon:",
+                        ":first_quarter_moon:", ":waxing_gibbous_moon:",
+                        ":full_moon:", ":waning_gibbous_moon:",
+                        ":last_quarter_moon:", ":waning_cresent_moon:",
+                        ":new_moon:"]
+
+    min_index = np.argmin([abs(lumination_num - num)
+                           for num in phase_num])
+    return emoji.emojize(moon_phase_emojis[min_index])
+
 def news(context):
-    """ https://pythonhosted.org/feedparser/introduction.html"""
+    """https://pythonhosted.org/feedparser/introduction.html"""
 
     saved_titles = [collections.deque(maxlen=50) for i in range(len(FEEDS))]
 

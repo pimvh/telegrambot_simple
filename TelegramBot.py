@@ -240,7 +240,7 @@ def beer_update(update, context):
     if choice == "G":
         number*=-1
 
-    if beer_base.count_documents() > 25:
+    if beer_base.count_documents({}) > 10:
         msg = "Maat fix ff een andere plek om je bieries bij te houden, niet mijn server volgooien aub."
         bot.send_message(chat_id=chat_id, text=msg,
                          parse_mode=telegram.ParseMode.MARKDOWN,

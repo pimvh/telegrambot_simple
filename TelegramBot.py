@@ -11,7 +11,7 @@ __copyright__ = "None"
 __credits__ = [""]
 __license__ = "GPL"
 __version__ = "1.0.0"
-__maintainer__ = "None"
+__maintainer__ = "Pim van helvoirt"
 __email__ = "pim.van.helvoirt@home.nl"
 __status__ = "Production"
 
@@ -67,8 +67,12 @@ FEEDS = {
 }
 
 def start(update, context):
-    # help(update, context)
-    pass
+    bot = context.bot
+    msg = "Hallo! Leuk dat je er bent!"
+
+    bot.send_message(chat_id=update.message.chat_id, text=msg,
+                        parse_mode=telegram.ParseMode.MARKDOWN)
+    help(update, context)
 
 def help(update, context):
     """ displays a help message (Dutch) """
@@ -90,7 +94,8 @@ def hello(update, context):
     user = update.message.from_user
     bot = context.bot
 
-    bot.send_message(chat_id=chat_id, text=f"Hallo {user.first_name}!")
+    msg = f"Hallo {user.first_name}!"
+    bot.send_message(chat_id=chat_id, text=msg)
 
 def why(update, context):
 
@@ -108,7 +113,30 @@ def leuk(update, context):
     user = update.message.from_user
     bot = context.bot
 
-    bot.send_message(chat_id=chat_id, text=f"Je bent zelf leuk {user.first_name}!")
+    options = [
+    f"Je bent zelf leuk {user.first_name}!",
+    "Jij leukerd!",
+    "Jij bent lief!"
+    ]
+
+    msg = random.choice(options)
+    bot.send_message(chat_id=chat_id, text=msg)
+
+def yourmom(update, context):
+    chat_id = update.message.chat_id
+    user = update.message.from_user
+    bot = context.bot
+
+    options = [
+    "Dat zei je mama gisteren ook.",
+    "Dat zei je moeder gisteren ook.",
+    "Ik zou nu een je moeder grap kunnen maken maar ik houd me in.",
+    "Je mama is lief."
+    ]
+
+    msg = random.choice(options)
+
+    bot.send_message(chat_id=chat_id, text=msg)
 
 def beer_start(update, context):
     """ starts the beer conversation, replying a keyboard with options"""
@@ -526,9 +554,7 @@ def main():
                     },
 
                     fallbacks=[CommandHandler("klaar", beer_end)],
-
                     name="Bierversatie",
-                    # per_user=True,
     )
 
     dp.add_handler(beer_conv)
@@ -537,9 +563,10 @@ def main():
     dp.add_handler(CommandHandler("news", news, filters=Filters.user(username=admin)))
     dp.add_handler(CommandHandler("weer", weather))
 
-    dp.add_handler(MessageHandler(leuk_filter, leuk))
     dp.add_handler(MessageHandler(hello_filter, hello))
     dp.add_handler(MessageHandler(why_filter, why))
+    dp.add_handler(MessageHandler(leuk_filter, leuk))
+    dp.add_handler(MessageHandler(yourmom_filter, yourmom))
 
     # updater.add_error_handler(error)
     updater.start_polling()
@@ -551,15 +578,23 @@ class LeukFilter(BaseFilter):
 
 class HelloFilter(BaseFilter):
     def filter(self, message):
-        return 'hallo' in str.lower(message.text) or 'hoi' in str.lower(message.text)
+        msg = str.lower(message.text)
+        return 'hallo' in msg or 'hoi' in msg
 
 class WhyFilter(BaseFilter):
     def filter(self, message):
+        msg = str.lower(message.text)
         return 'waarom' in str.lower(message.text)
+
+class YourMomFilter(BaseFilter):
+    def filter(self, message):
+        msg = str.lower(message.text)
+        return 'mama' in msg or 'moeder' in msg
 
 leuk_filter = LeukFilter()
 hello_filter = HelloFilter()
 why_filter = WhyFilter()
+yourmom_filter = YourMomFilter()
 
 if __name__ == "__main__":
     main()

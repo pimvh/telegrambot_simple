@@ -101,16 +101,30 @@ def hello(update, context):
     msg = f"Hallo {user.first_name}!"
     bot.send_message(chat_id=chat_id, text=msg)
 
-def why(update, context):
-
+def question(update, context):
     bot = context.bot
-    # return a random reason from file
-    with open(REASONS) as file:
-        lines = file.readlines()
-        t = random.choice(lines)
+    user = update.message.from_user
+    inc_msg = update.message.text
 
-        bot.send_message(chat_id=update.message.chat_id, text=t,
-                         parse_mode=telegram.ParseMode.MARKDOWN)
+    # answer why questions with a reasons from database
+    if 'waarom' in str.lower(update.message.text):
+
+        # return a random reason from file
+        with open(REASONS) as file:
+            lines = file.readlines()
+            msg = random.choice(lines)
+
+    # answer other questions with
+    else:
+        options = [
+        f"Vraag het maar niet aan mij, ik ben niet alwetend.",
+        ("https://lmgtfy.com/?q=" + inc_msg.replace(" ", "+") + "&pp=1&s=g&t=w"),
+        f"Ja he dat weet ik toch ook niet, google dat maar ff {user.first_name}..."
+        ]
+
+        msg = random.choice(options)
+    bot.send_message(chat_id=update.message.chat_id, text=msg,
+                     parse_mode=telegram.ParseMode.MARKDOWN)
 
 def leuk(update, context):
     chat_id = update.message.chat_id
@@ -590,7 +604,7 @@ def main():
     dp.add_handler(CommandHandler("weer", weather))
 
     dp.add_handler(MessageHandler(hello_filter, hello))
-    dp.add_handler(MessageHandler(why_filter, why))
+    dp.add_handler(MessageHandler(question_filter, question))
     dp.add_handler(MessageHandler(leuk_filter, leuk))
     dp.add_handler(MessageHandler(yourmom_filter, yourmom))
 
@@ -607,10 +621,11 @@ class HelloFilter(BaseFilter):
         msg = str.lower(message.text)
         return 'hallo' in msg or 'hoi' in msg
 
-class WhyFilter(BaseFilter):
+class QuestionFilter(BaseFilter):
     def filter(self, message):
         msg = str.lower(message.text)
-        return 'waarom' in str.lower(message.text)
+        return ('waarom' in str.lower(message.text) or
+                '?' in str.lower(message.text))
 
 class YourMomFilter(BaseFilter):
     def filter(self, message):
@@ -619,7 +634,7 @@ class YourMomFilter(BaseFilter):
 
 leuk_filter = LeukFilter()
 hello_filter = HelloFilter()
-why_filter = WhyFilter()
+question_filter = QuestionFilter()
 yourmom_filter = YourMomFilter()
 
 if __name__ == "__main__":

@@ -1,8 +1,32 @@
 # files to ignore
 
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+
+# C extensions
+*.so
+
+# Distribution / packaging
+bin/
+build/
+develop-eggs/
+dist/
+eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Do not track other files
 *.txt
 *.jpg
 *.bash
+*.json
 
 # Track reasons
 !redenen.txt

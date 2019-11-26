@@ -1,3 +1,7 @@
+"""
+The module defines constants used by the Telegram bot.
+"""
+
 import json
 import os
 
@@ -15,7 +19,7 @@ DARKSKY = "https://api.darksky.net/forecast"
 REASONS = os.path.join(DIR, 'redenen.txt')
 
 """
-    *** Tokens to call API's ***
+    *** Tokens for authentication ***
 """
 TOKENS_FILE = os.path.join(DIR, 'tokens', 'tokens.json')
 

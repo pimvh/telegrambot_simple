@@ -1,37 +1,25 @@
 #!/usr/bin/env python3
 """
-The module below implements a telegram bot with a number of commandhandlers:
-- # TODO:
+The module below implements a telegram bot with a number of commandhandlers (in Dutch):
+- some general commands, like /start and /help.
+- /beer for a beer database
+- some message filter than generate responses to the user.
+- a reddit reader that pulls memes from me_irl
+- a news reader (in development)
 """
 
 __author__ = """Pim van Helvoirt"""
 __copyright__ = "None"
 __credits__ = [""]
 __license__ = "GPL"
-__version__ = "1.0.0"
+__version__ = "1.0.3"
 __maintainer__ = "Pim van helvoirt"
 __email__ = "pim.van.helvoirt@home.nl"
 __status__ = "Production"
 
-import collections
-import datetime
-import os
 import logging
 
-import requests
-import sys
-import time
-
-# telegram python wrapper
-from telegram.ext import (
-    CommandHandler,
-    Updater,
-)
-
-# from telegram.ext import (CommandHandler, BaseFilter, Filters, MessageHandler)
-from telegram.ext import CommandHandler
-
-from constants import TELEGRAM_TOKEN
+from commands.general import start, help_msg
 
 from commands.beer_base import beer_conv
 from commands.message_responses import hello, leuk, question, yourmom
@@ -39,44 +27,24 @@ from commands.news_reader import news, view_feeds
 from commands.reddit_reader import reddit
 from commands.weather_report import weer
 
-# Token filename
+from telegram.ext import Updater
 
-def start(update, context):
-    bot = context.bot
-    msg = "Hallo! Leuk dat je er bent!"
-
-    bot.send_message(chat_id=update.message.chat_id, text=msg,
-                        parse_mode=telegram.ParseMode.MARKDOWN)
-    help(update, context)
-
-def help(update, context):
-    """ displays a help message (Dutch) """
-
-    bot = context.bot
-    msg = """ Deze bot heeft de volgende *commandos*:
-    - /help : laat dit bericht zien
-    - /weer _[locatie]_ : geeft weer terug op locatie
-    - /hallo : krijg een groet van deze bot
-    - /waarom : krijg een willekeurige reden terug
-    - /bier: een database om bij te houden: van wie je bier krijgt of aan wie je bier schuldig bent
-    """
-
-    bot.send_message(chat_id=update.message.chat_id, text=msg,
-                        parse_mode=telegram.ParseMode.MARKDOWN)
+from constants import TELEGRAM_TOKEN
 
 def main():
-    """ Create the updater and pass it your bot"s token
-        and add the handlers to the bot. """
+    """ Create the updater and pass it your a token
+        and add handlers to the bot. """
 
     updater = Updater(token=TELEGRAM_TOKEN, use_context=True)
 
     dp = updater.dispatcher
 
-    # log errors
+    # log errors on a basic level
     logging.basicConfig(format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
                         level=logging.INFO)
 
-    dp.add_handler(CommandHandler("help", help))
+    dp.add_handler(start)
+    dp.add_handler(help_msg)
 
     dp.add_handler(beer_conv)
     dp.add_handler(hello)

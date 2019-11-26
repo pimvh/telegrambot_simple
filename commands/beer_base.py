@@ -1,3 +1,6 @@
+"""
+The module below implements a beer database, for a Telegram bot
+"""
 import emoji
 import pymongo
 
@@ -16,7 +19,7 @@ def beer_start(update, context):
     chat_id = update.message.chat_id
     bot = context.bot
 
-    reply_keyboard = [["Krijgen van" , "Geven aan", "Nog te krijgen?", "Nog te geven?"]]
+    reply_keyboard = [["Krijgen van", "Geven aan", "Nog te krijgen?", "Nog te geven?"]]
     msg = emoji.emojize(":beer_mug: Geef aan wat je wilt! :beer_mug:")
 
     bot.send_message(chat_id=chat_id, text=msg,
@@ -32,7 +35,7 @@ def beer_choice(update, context):
     bot = context.bot
     text = update.message.text
 
-    if text == "Nog te krijgen?" or text == "Nog te geven?":
+    if text in ("Nog te krijgen?", "Nog te geven?"):
 
         msg = beer_output_data(chat_id, text[7])
         bot.send_message(chat_id=chat_id, text=msg,
@@ -41,7 +44,7 @@ def beer_choice(update, context):
 
         return ConversationHandler.END
 
-    elif text == "Krijgen van" or text == "Geven aan":
+    if text in ("Krijgen van", "Geven aan"):
 
         msg = "Geef de naam van de persoon."
 
@@ -53,14 +56,15 @@ def beer_choice(update, context):
 
         return NAME
 
-    else:
-        msg = "Sorry, maar dit kan niet."
-        bot.send_message(chat_id=chat_id, text=msg,
-                         parse_mode=ParseMode.MARKDOWN)
+    msg = "Sorry, maar dit kan niet."
+    bot.send_message(chat_id=chat_id, text=msg,
+                     parse_mode=ParseMode.MARKDOWN)
 
-        return ConversationHandler.END
+    return ConversationHandler.END
 
 def beer_name(update, context):
+    """ after getting a name from the user,
+        return a keyboard with number options """
     chat_id = update.message.chat_id
     bot = context.bot
     text = update.message.text
@@ -78,17 +82,18 @@ def beer_name(update, context):
     return UPDATE
 
 def beer_update(update, context):
-
+    """ after getting a number from the user,
+        updates the database with previously given name and number """
     chat_id = update.message.chat_id
     bot = context.bot
     text = update.message.text
 
     try:
-        assert(text.isdigit())
+        assert text.isdigit()
         number = int(text)
 
     except:
-        msg = "Sorry, maar dit kan niet."
+        msg = "Sorry, maar dat is geen getal."
         bot.send_message(chat_id=chat_id, text=msg,
                          parse_mode=ParseMode.MARKDOWN,
                          reply_markup=ReplyKeyboardRemove())
@@ -104,10 +109,10 @@ def beer_update(update, context):
     beer_database = myclient["beerbase"][str(chat_id)]
     query = {"name": name}
 
-    out = beer_database.find_one(query)
+    result = beer_database.find_one(query)
 
     if choice == "G":
-        number*=-1
+        number *= -1
 
     if beer_database.count_documents({}) > 10:
         msg = "Maat fix ff een andere plek om je bieries bij te houden, niet mijn server volgooien aub."
@@ -117,7 +122,7 @@ def beer_update(update, context):
         return ConversationHandler.END
 
     # check if exist in database, if not add
-    if out is None:
+    if result is None:
 
         entry = {"name": name, "number": number}
         beer_database.insert_one(entry)
@@ -128,9 +133,9 @@ def beer_update(update, context):
     else:
         # calculate new number
 
-        new_num = out["number"] + number
+        new_num = result["number"] + number
 
-        # print(out["number"], number, new_num)
+        # print(result["number"], number, new_num)
         if new_num > 0:
             # update entry
             update_entry = {"name": name, "number": new_num}
@@ -159,44 +164,43 @@ def beer_update(update, context):
     return ConversationHandler.END
 
 def beer_output_data(chat_id, key):
-
+    """ output the current contents of the database to the user """
     myclient = pymongo.MongoClient()
     beer_database = myclient["beerbase"][str(chat_id)]
     krijgen = False
 
     if key == 'k':
-        query = { "number": {"$gt": 0 } }
+        query = {"number": {"$gt": 0}}
         krijgen = True
     else:
-        query = { "number": {"$lt": 0 } }
+        query = {"number": {"$lt": 0}}
 
     # count docs
     item_count = beer_database.count_documents(query)
     # print('this is the item count', item_count)
-    s=""
+    output = ""
 
     if item_count == 0:
         if krijgen:
-            s = "Je krijgt bier van niemand helaas. Mag wel (:"
+            output = "Je krijgt bier van niemand helaas. Mag wel (:"
         else:
-            s = "Je hoeft geen bier aan iemand te geven. Mag wel (:"
+            output = "Je hoeft geen bier aan iemand te geven. Mag wel (:"
     else:
         # query the database
-        out = beer_database.find(query)
+        result = beer_database.find(query)
 
-        for elem in out:
+        for elem in result:
 
             if krijgen:
-                s += emoji.emojize(f"Je krijgt {elem['number']} :clinking_beer_mugs: van *{elem['name']}*.\n")
+                output += emoji.emojize(f"Je krijgt {elem['number']} :clinking_beer_mugs: van *{elem['name']}*.\n")
             else:
-                s += emoji.emojize(f"Je bent {abs(elem['number'])} :clinking_beer_mugs: verschuldigd aan *{elem['name']}*.\n")
+                output += emoji.emojize(f"Je bent {abs(elem['number'])} :clinking_beer_mugs: verschuldigd aan *{elem['name']}*.\n")
 
-    return s
+    return output
 
 def beer_end(update, context):
-
+    """ end the conversation with the user """
     bot = context.bot
-    user = update.message.from_user
 
     if "choice" in context.user_data:
         del context.user_data["choice"]
@@ -212,12 +216,9 @@ def beer_end(update, context):
     return ConversationHandler.END
 
 beer_conv = ConversationHandler(
-                entry_points=[CommandHandler("bier", beer_start)],
-                states={
-                    CHOICE: [MessageHandler(Filters.text, beer_choice)],
-                    NAME: [MessageHandler(Filters.text, beer_name)],
-                    UPDATE: [MessageHandler(Filters.text, beer_update)],
-                },
-
-                fallbacks=[CommandHandler("klaar", beer_end)],
-                name="Bierversatie", )
+    entry_points=[CommandHandler("bier", beer_start)],
+    states={CHOICE: [MessageHandler(Filters.text, beer_choice)],
+            NAME: [MessageHandler(Filters.text, beer_name)],
+            UPDATE: [MessageHandler(Filters.text, beer_update)],},
+    fallbacks=[CommandHandler("klaar", beer_end)],
+    name="Bierversatie",)

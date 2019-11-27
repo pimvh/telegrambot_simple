@@ -25,10 +25,10 @@ def question(update, context):
     """ replies to questions from the user """
     bot = context.bot
     user = update.message.from_user
-    inc_msg = update.message.text
+    inc_msg = str.lower(update.message.text)
 
     # answer why questions with a reasons from database
-    if 'waarom' in str.lower(update.message.text):
+    if 'waarom' in inc_msg:
 
         # return a random reason from file
         with open(REASONS) as file:
@@ -37,6 +37,11 @@ def question(update, context):
 
     # answer other questions with
     else:
+        # TODO: introduce random silence
+        rng = random.random()
+
+        if rng < 0.9 and not 'rob' not in inc_msg:
+            return
         options = [
             f"Vraag het maar niet aan mij, ik ben niet alwetend.",
             ("https://lmgtfy.com/?q=" + inc_msg.replace(" ", "+") + "&pp=1&s=g&t=w"),
@@ -44,6 +49,7 @@ def question(update, context):
             ]
 
         msg = random.choice(options)
+
     bot.send_message(chat_id=update.message.chat_id, text=msg,
                      parse_mode=ParseMode.MARKDOWN)
 

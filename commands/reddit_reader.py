@@ -15,12 +15,19 @@ from telegram.ext import CommandHandler
 
 from constants import REDDIT
 
+def show_pages(update, context):
+    # TODO: functie schrijven, returnt keyboard
+    pass
+
 def get_reddit_meme(update, context):
     """ get acces reddit using feedparser and parse html using BeautifulSoup """
     bot = context.bot
     chat_id = update.message.chat_id
+    inc_msg = update.message.from_user
 
-    feed = feedparser.parse(REDDIT)
+    # TODO: introduce keyboard for choosing meme_page
+    page = REDDIT['me_irl']
+    feed = feedparser.parse(page)
 
     # update_tag = feed['feed']['updated']
 

@@ -34,3 +34,10 @@ class YourMomFilter(BaseFilter):
         return 'mama' in msg or 'moeder' in msg
 
 yourmom_filter = YourMomFilter()
+
+class RedditPageFilter(BaseFilter):
+    """ a message filter to filters reddit pages """
+    def filter(self, message):
+        return re.search(r'(me_irl|ik_ihe|toomeirlformeirl)(\?|!|\.| |)*', message.text, re.I)
+
+reddit_filter = RedditPageFilter()

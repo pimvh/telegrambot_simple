@@ -121,7 +121,8 @@ def clothing_advice(temperature, precipProb, precipIntensity):
             output = "Regenjas"
         elif temperature < 26:
             output = "T-shirt aan maar wel paraplu mee"
-        output = "Het is zo warm, een verfrissende bui kan geen kwaad"
+        else:
+            output = "Het is zo warm, een verfrissende bui kan geen kwaad"
     else:
         if temperature < 9:
             output = "Winterjas"

@@ -5,6 +5,7 @@ from telegram.ext import CommandHandler
 from telegram.ext import BaseFilter, Filters
 
 from constants import ADMIN
+from constants import NEWS_FEEDS
 
 from telegram.ext import BaseFilter, Filters
 from telegram.ext import CommandHandler
@@ -13,11 +14,6 @@ from telegram.ext import CommandHandler
 TIMED_INTERVAL = 900
 
 # links of feeds to output
-NEWS_FEEDS = {
-"Volkskrant": "https://www.volkskrant.nl/voorpagina/rss.xml",
-"Trouw": "https://www.trouw.nl/voorpagina/rss.xml"
-# "NRC": "https://www.nrc.nl/rss/",
-}
 
 def news(context):
     """https://pythonhosted.org/feedparser/introduction.html"""

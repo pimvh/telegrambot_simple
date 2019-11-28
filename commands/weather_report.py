@@ -157,7 +157,7 @@ def moonphase_icon_helper(state):
     """ return appropriate phase of the moon """
     lumination_num = float(state)
     phase_num = [0, 0.125, 0.25, 0.375, 0.5, 0.625, 0.75, 0.875, 1]
-    moon_phase_emojis = [":new_moon:", "waxing_crescent_moon:",
+    moon_phase_emojis = [":new_moon:", ":waxing_crescent_moon:",
                          ":first_quarter_moon:", ":waxing_gibbous_moon:",
                          ":full_moon:", ":waning_gibbous_moon:",
                          ":last_quarter_moon:", ":waning_crescent_moon:",

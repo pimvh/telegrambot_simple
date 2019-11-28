@@ -17,8 +17,9 @@ REDDIT = {"me_irl": "https://reddit.com/r/me_irl/top/.rss",
 DARKSKY = "https://api.darksky.net/forecast"
 
 NEWS_FEEDS = {"Volkskrant": "https://www.volkskrant.nl/voorpagina/rss.xml",
-              "Trouw": "https://www.trouw.nl/voorpagina/rss.xml",
-              #"NRC": "https://www.nrc.nl/rss/"}
+              "Trouw": "https://www.trouw.nl/voorpagina/rss.xml"
+              #"NRC": "https://www.nrc.nl/rss/"
+              }
 """
     *** File to pull random reasons from ***
 """

@@ -21,9 +21,9 @@ def hello(update, context):
     user = update.message.from_user
     bot = context.bot
 
-    time.sleep(HUMAN_DELAY)
-
     msg = f"Hallo {user.first_name}!"
+
+    time.sleep(HUMAN_DELAY*len(msg))
     bot.send_message(chat_id=chat_id, text=msg)
 
 def question(update, context):
@@ -31,8 +31,6 @@ def question(update, context):
     bot = context.bot
     user = update.message.from_user
     inc_msg = str.lower(update.message.text)
-
-    time.sleep(HUMAN_DELAY)
 
     # answer why questions with a reasons from database
     if 'waarom' in inc_msg:
@@ -56,6 +54,7 @@ def question(update, context):
             ]
 
         msg = random.choice(options)
+    time.sleep(HUMAN_DELAY * len(msg))
 
     bot.send_message(chat_id=update.message.chat_id, text=msg,
                      parse_mode=ParseMode.MARKDOWN)
@@ -66,21 +65,18 @@ def leuk(update, context):
     user = update.message.from_user
     bot = context.bot
 
-    time.sleep(HUMAN_DELAY)
-
     options = [
         f"Je bent zelf leuk {user.first_name}!",
         "Jij leukerd!"]
 
     msg = random.choice(options)
+    time.sleep(HUMAN_DELAY * len(msg))
     bot.send_message(chat_id=chat_id, text=msg)
 
 def yourmom(update, context):
     """ tries to make yo mama jokes """
     chat_id = update.message.chat_id
     bot = context.bot
-
-    time.sleep(HUMAN_DELAY)
 
     options = [
         "Dat zei je mama gisteren ook.",
@@ -90,13 +86,12 @@ def yourmom(update, context):
 
     msg = random.choice(options)
 
+    time.sleep(HUMAN_DELAY*len(msg))
     bot.send_message(chat_id=chat_id, text=msg)
 
 def hard(update, context):
     chat_id = update.message.chat_id
     bot = context.bot
-
-    time.sleep(HUMAN_DELAY)
 
     options = [
         "Ohjee wat enorm zwaar ook inderdaad.",
@@ -106,6 +101,7 @@ def hard(update, context):
 
     msg = random.choice(options)
 
+    time.sleep(HUMAN_DELAY*len(msg))
     bot.send_message(chat_id=chat_id, text=msg)
 
 

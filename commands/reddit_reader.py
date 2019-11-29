@@ -46,7 +46,7 @@ def get_memes(update, context):
 
     msg = f"'*' {feed['feed']['title']} '*'"
 
-    if feed.get('subtitle', 0):
+    if feed['feed'].get('subtitle', 0):
         subtitle = feed['feed']['subtitle']
         msg = f"\n{subtitle}"
         bot.send_message(chat_id, msg, parse_mode=ParseMode.MARKDOWN)

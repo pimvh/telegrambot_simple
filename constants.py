@@ -7,6 +7,9 @@ import os
 
 DIR = os.path.dirname(__file__)
 
+# average words per minute
+HUMAN_DELAY = (40/60)
+
 """
     *** Constant URLs ***
 """

@@ -35,9 +35,17 @@ class YourMomFilter(BaseFilter):
 
 yourmom_filter = YourMomFilter()
 
+class HardTimesFilter(BaseFilter):
+    def filter(self, message):
+        return re.search(r'(moeilijk|ingewikkeld)(\?|!|\.| |)*',
+                         message.text, re.I)
+
+hardtimes_filter = HardTimesFilter()
+
 class RedditPageFilter(BaseFilter):
     """ a message filter to filters reddit pages """
     def filter(self, message):
-        return re.search(r'(me_irl|ik_ihe|toomeirlformeirl)(\?|!|\.| |)*', message.text, re.I)
+        return re.search(r'r/(me_irl|ik_ihe|toomeirlformeirl)',
+                         message.text, re.I)
 
 reddit_filter = RedditPageFilter()

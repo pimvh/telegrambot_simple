@@ -2,21 +2,26 @@
 This module generates responses to the input of the user.
 """
 import random
+import time
 
-from commands.message_filters import hello_filter, question_filter, leuk_filter, yourmom_filter
+from commands.message_filters import (hello_filter, question_filter,
+                                      leuk_filter, yourmom_filter,
+                                      hardtimes_filter)
 
 import emoji
 
 from telegram import ParseMode
 from telegram.ext import MessageHandler
 
-from constants import REASONS
+from constants import REASONS, HUMAN_DELAY
 
 def hello(update, context):
     """ greets the user back """
     chat_id = update.message.chat_id
     user = update.message.from_user
     bot = context.bot
+
+    time.sleep(HUMAN_DELAY)
 
     msg = f"Hallo {user.first_name}!"
     bot.send_message(chat_id=chat_id, text=msg)
@@ -26,6 +31,8 @@ def question(update, context):
     bot = context.bot
     user = update.message.from_user
     inc_msg = str.lower(update.message.text)
+
+    time.sleep(HUMAN_DELAY)
 
     # answer why questions with a reasons from database
     if 'waarom' in inc_msg:
@@ -59,6 +66,8 @@ def leuk(update, context):
     user = update.message.from_user
     bot = context.bot
 
+    time.sleep(HUMAN_DELAY)
+
     options = [
         f"Je bent zelf leuk {user.first_name}!",
         "Jij leukerd!"]
@@ -71,6 +80,8 @@ def yourmom(update, context):
     chat_id = update.message.chat_id
     bot = context.bot
 
+    time.sleep(HUMAN_DELAY)
+
     options = [
         "Dat zei je mama gisteren ook.",
         emoji.emojize("Dat zei je moeder gisteren ook. :woman_raising_hand:"),
@@ -81,7 +92,25 @@ def yourmom(update, context):
 
     bot.send_message(chat_id=chat_id, text=msg)
 
+def hard(update, context):
+    chat_id = update.message.chat_id
+    bot = context.bot
+
+    time.sleep(HUMAN_DELAY)
+
+    options = [
+        "Ohjee wat enorm zwaar ook inderdaad.",
+        "Moeilijk, moeilijk, moeeeeeilijkkkkkkkk...",
+        "Het leven is ontzettend zwaar.",
+        "Hier neem wat roosvice je komt er wel bovenop."]
+
+    msg = random.choice(options)
+
+    bot.send_message(chat_id=chat_id, text=msg)
+
+
 hello = MessageHandler(hello_filter, hello)
 question = MessageHandler(question_filter, question)
 leuk = MessageHandler(leuk_filter, leuk)
 yourmom = MessageHandler(yourmom_filter, yourmom)
+hardtimes = MessageHandler(hardtimes_filter, hard)

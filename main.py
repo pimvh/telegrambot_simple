@@ -22,7 +22,8 @@ import logging
 from commands.general import start, help_msg
 
 from commands.beer_base import beer_conv
-from commands.message_responses import hello, leuk, question, yourmom
+from commands.message_responses import (hello, leuk, question,
+                                        yourmom, hardtimes)
 from commands.news_reader import news, view_feeds
 from commands.reddit_reader import reddit
 from commands.weather_report import weer
@@ -47,6 +48,7 @@ def main():
     dp.add_handler(help_msg)
 
     dp.add_handler(beer_conv)
+    dp.add_handler(hardtimes)
     dp.add_handler(hello)
     dp.add_handler(leuk)
     dp.add_handler(news)

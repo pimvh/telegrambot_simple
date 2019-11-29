@@ -92,13 +92,13 @@ def format_weather(location, response):
     output += ("Maximum Temperatuur: " + str(maxTemp) + " °C\n" +
                "Minimum Temperatuur: " + str(minTemp) + " °C\n\n")
 
+    # omschrijven naar dict?
     if precipType:
-
-        if  precipType == "rain":
+        if  "rain" in precipType:
             output += "\nRegenkans: "
-        elif precipType == "snow":
+        elif "snow" in precipType:
             output += "\nSneeuwkans: "
-        elif precipType == "sleet":
+        elif "sleet" in precipType:
             output += "\nHagelkans: "
 
         output += str(precipProb) + "%\n\n"
@@ -132,8 +132,8 @@ def clothing_advice(temperature, precipProb, precipIntensity):
             output = "Dunne trui of een t-shirt met lange mouwen"
         elif temperature < 26:
             output = "T-shirt"
-
-        output = "zo weinig mogelijk kleren lol"
+        else:
+            output = "zo weinig mogelijk kleren lol"
 
     return output
 

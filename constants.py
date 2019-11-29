@@ -8,12 +8,13 @@ import os
 DIR = os.path.dirname(__file__)
 
 # character typingspeed per second
-HUMAN_DELAY = (1/8)
+HUMAN_DELAY = (1/9)
 
 """ *** Constant URLs *** """
-REDDIT = {"me_irl": "https://reddit.com/r/me_irl/top/.rss",
-          "ik_ihe": "https://reddit.com/r/ik_ihe/top/.rss",
-          "toomeirlformeirl": "https://reddit.com/ik_ihe/top/.rss"}
+REDDIT = {"r/me_irl": "https://reddit.com/r/me_irl/top/.rss",
+          "r/ik_ihe": "https://reddit.com/r/ik_ihe/top/.rss",
+          #"r/toomeirlformeirl": "https://www.reddit.com/r/TooMeIrlForMeIrl/top/.rss"
+          }
 
 DARKSKY = "https://api.darksky.net/forecast"
 

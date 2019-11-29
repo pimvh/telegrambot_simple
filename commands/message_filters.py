@@ -48,4 +48,4 @@ class RedditPageFilter(BaseFilter):
         return re.search(r'r/(me_irl|ik_ihe|toomeirlformeirl)',
                          message.text, re.I)
 
-reddit_filter = RedditPageFilter()
+redditpage_filter = RedditPageFilter()

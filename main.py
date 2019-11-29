@@ -25,7 +25,7 @@ from commands.beer_base import beer_conv
 from commands.message_responses import (hello, leuk, question,
                                         yourmom, hardtimes)
 from commands.news_reader import news, view_feeds
-from commands.reddit_reader import reddit
+from commands.reddit_reader import reddit_conv
 from commands.weather_report import weer
 
 from telegram.ext import Updater
@@ -53,7 +53,7 @@ def main():
     dp.add_handler(leuk)
     dp.add_handler(news)
     dp.add_handler(question)
-    dp.add_handler(reddit)
+    dp.add_handler(reddit_conv)
     dp.add_handler(view_feeds)
     dp.add_handler(weer)
     dp.add_handler(yourmom)

@@ -28,12 +28,14 @@ def meme(update, context):
 
     bot.send_message(chat_id=chat_id, text=msg,
                       parse_mode=ParseMode.MARKDOWN,
+                      reply_to_message_id=update.message.message_id,
                       reply_markup=ReplyKeyboardMarkup(reply_keyboard,
-                                                       one_time_keyboard=True))
+                                                       one_time_keyboard=True,
+                                                       selective=True))
     return CHOICE
 
 def get_memes(update, context):
-    """ get acces reddit using feedparser and parse html using BeautifulSoup """
+    """ get acces redditReplyKeyboardMarkup using feedparser and parse html using BeautifulSoup """
     bot = context.bot
     chat_id = update.message.chat_id
     inc_msg = update.message.text
@@ -49,7 +51,9 @@ def get_memes(update, context):
     if feed['feed'].get('subtitle', 0):
         subtitle = feed['feed']['subtitle']
         msg = f"\n{subtitle}"
-        bot.send_message(chat_id, msg, parse_mode=ParseMode.MARKDOWN)
+        bot.send_message(chat_id, msg,
+                         reply_to_message_id=update.message.message_id,
+                         parse_mode=ParseMode.MARKDOWN)
 
     posts = feed['entries']
 
@@ -65,7 +69,7 @@ def get_memes(update, context):
         post_content_html = post['content'][0]['value']
 
         bs_content = bs(post_content_html, "xml")
-        print( '\n\n', post_content_html, '\n\n')
+        # print( '\n\n', post_content_html, '\n\n')
         span = bs_content.find("span")
         # print(span, '\n\n')
         if span:
@@ -81,7 +85,8 @@ def get_memes(update, context):
     for img in img_links:
         time.sleep(1)
         bot.send_photo(update.message.chat_id, img,
-                       caption=random.choice(captions), parse_mode=ParseMode.MARKDOWN)
+                       caption=random.choice(captions), parse_mode=ParseMode.MARKDOWN,
+                       reply_markup=ReplyKeyboardRemove())
 
     return ConversationHandler.END
 
@@ -91,6 +96,7 @@ def meme_fallback(update, context):
 
     bot.send_message(chat_id=update.message.chat_id, text=msg,
                      parse_mode=ParseMode.MARKDOWN,
+                     reply_to_message_id=update.message.message_id,
                      reply_markup=ReplyKeyboardRemove())
 
     return ConversationHandler.END

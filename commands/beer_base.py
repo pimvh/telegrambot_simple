@@ -24,8 +24,10 @@ def beer_start(update, context):
 
     bot.send_message(chat_id=chat_id, text=msg,
                      parse_mode=ParseMode.MARKDOWN,
+                     reply_to_message_id=update.message.message_id,
                      reply_markup=ReplyKeyboardMarkup(reply_keyboard,
-                                                      one_time_keyboard=True))
+                                                      one_time_keyboard=True,
+                                                      selective=True))
     return CHOICE
 
 def beer_choice(update, context):
@@ -40,6 +42,7 @@ def beer_choice(update, context):
         msg = beer_output_data(chat_id, text[7])
         bot.send_message(chat_id=chat_id, text=msg,
                          parse_mode=ParseMode.MARKDOWN,
+                         reply_to_message_id=update.message.message_id,
                          reply_markup=ReplyKeyboardRemove())
 
         return ConversationHandler.END
@@ -52,6 +55,7 @@ def beer_choice(update, context):
 
         bot.send_message(chat_id=chat_id, text=msg,
                          parse_mode=ParseMode.MARKDOWN,
+                         reply_to_message_id=update.message.message_id,
                          reply_markup=ReplyKeyboardRemove())
 
         return NAME
@@ -76,8 +80,10 @@ def beer_name(update, context):
 
     bot.send_message(chat_id=chat_id, text=msg,
                      parse_mode=ParseMode.MARKDOWN,
+                     reply_to_message_id=update.message.message_id,
                      reply_markup=ReplyKeyboardMarkup(reply_keyboard,
-                                                      one_time_keyboard=True))
+                                                      one_time_keyboard=True,
+                                                      selective=True))
 
     return UPDATE
 
@@ -96,6 +102,7 @@ def beer_update(update, context):
         msg = "Sorry, maar dat is geen getal."
         bot.send_message(chat_id=chat_id, text=msg,
                          parse_mode=ParseMode.MARKDOWN,
+                         reply_to_message_id=update.message.message_id,
                          reply_markup=ReplyKeyboardRemove())
         return ConversationHandler.END
 
@@ -118,6 +125,7 @@ def beer_update(update, context):
         msg = "Maat fix ff een andere plek om je bieries bij te houden, niet mijn server volgooien aub."
         bot.send_message(chat_id=chat_id, text=msg,
                          parse_mode=ParseMode.MARKDOWN,
+                         reply_to_message_id=update.message.message_id,
                          reply_markup=ReplyKeyboardRemove())
         return ConversationHandler.END
 
@@ -159,6 +167,7 @@ def beer_update(update, context):
 
     bot.send_message(chat_id=chat_id, text=msg,
                      parse_mode=ParseMode.MARKDOWN,
+                     reply_to_message_id=update.message.message_id,
                      reply_markup=ReplyKeyboardRemove())
 
     return ConversationHandler.END
@@ -184,7 +193,7 @@ def beer_output_data(chat_id, key):
         if krijgen:
             output = "Je krijgt bier van niemand helaas. Mag wel (:"
         else:
-            output = "Je hoeft geen bier aan iemand te geven. Mag wel (:"
+            output = "Je hoeft bier aan niemand te geven. Mag wel (:"
     else:
         # query the database
         result = beer_database.find(query)
@@ -211,6 +220,7 @@ def beer_end(update, context):
     msg = "Joe! Dank voor de input!"
     bot.send_message(chat_id=update.message.chat_id, text=msg,
                      parse_mode=ParseMode.MARKDOWN,
+                     reply_to_message_id=update.message.message_id,
                      reply_markup=ReplyKeyboardRemove())
 
     return ConversationHandler.END

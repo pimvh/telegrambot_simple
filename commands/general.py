@@ -11,6 +11,7 @@ def start_func(update, context):
     msg = "Hallo! Leuk dat je er bent!"
 
     bot.send_message(chat_id=update.message.chat_id, text=msg,
+                     reply_to_message_id=update.message.message_id,
                      parse_mode=ParseMode.MARKDOWN)
     help_func(update, context)
 
@@ -27,6 +28,7 @@ def help_func(update, context):
     """
 
     bot.send_message(chat_id=update.message.chat_id, text=msg,
+                     reply_to_message_id=update.message.message_id,
                      parse_mode=ParseMode.MARKDOWN)
 
 start = CommandHandler("start", start_func)

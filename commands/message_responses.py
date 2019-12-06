@@ -24,7 +24,8 @@ def hello(update, context):
     msg = f"Hallo {user.first_name}!"
 
     time.sleep(HUMAN_DELAY*len(msg))
-    bot.send_message(chat_id=chat_id, text=msg)
+    bot.send_message(chat_id=chat_id, text=msg,
+                     reply_to_message_id=update.message.message_id)
 
 def question(update, context):
     """ replies to questions from the user """
@@ -57,6 +58,7 @@ def question(update, context):
     time.sleep(HUMAN_DELAY * len(msg))
 
     bot.send_message(chat_id=update.message.chat_id, text=msg,
+                     reply_to_message_id=update.message.message_id,
                      parse_mode=ParseMode.MARKDOWN)
 
 def leuk(update, context):
@@ -71,7 +73,8 @@ def leuk(update, context):
 
     msg = random.choice(options)
     time.sleep(HUMAN_DELAY * len(msg))
-    bot.send_message(chat_id=chat_id, text=msg)
+    bot.send_message(chat_id=chat_id, text=msg,
+                     reply_to_message_id=update.message.message_id)
 
 def yourmom(update, context):
     """ tries to make yo mama jokes """
@@ -87,7 +90,8 @@ def yourmom(update, context):
     msg = random.choice(options)
 
     time.sleep(HUMAN_DELAY*len(msg))
-    bot.send_message(chat_id=chat_id, text=msg)
+    bot.send_message(chat_id=chat_id, text=msg,
+                     reply_to_message_id=update.message.message_id)
 
 def hard(update, context):
     chat_id = update.message.chat_id
@@ -102,7 +106,8 @@ def hard(update, context):
     msg = random.choice(options)
 
     time.sleep(HUMAN_DELAY*len(msg))
-    bot.send_message(chat_id=chat_id, text=msg)
+    bot.send_message(chat_id=chat_id, text=msg,
+                     reply_to_message_id=update.message.message_id)
 
 
 hello = MessageHandler(hello_filter, hello)

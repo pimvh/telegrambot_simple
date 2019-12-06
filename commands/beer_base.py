@@ -62,6 +62,7 @@ def beer_choice(update, context):
 
     msg = "Sorry, maar dit kan niet."
     bot.send_message(chat_id=chat_id, text=msg,
+                     reply_to_message_id=update.message.message_id,
                      parse_mode=ParseMode.MARKDOWN)
 
     return ConversationHandler.END

@@ -22,6 +22,7 @@ def get_weather(update, context):
         location_str = context.args[0]
     except:
         bot.send_message(chat_id=chat_id,
+                         reply_to_message_id=update.message.message_id,
                          text="Geen geldige/lege query. Standaard: Amsterdam")
 
         location_str = "Amsterdam"
@@ -33,10 +34,13 @@ def get_weather(update, context):
         location = geolocator.geocode(location_str)
     except:
         bot.send_message(chat_id=chat_id,
+                         reply_to_message_id=update.message.message_id,
                          text="De Geolocator service doet het ff niet, zoek maar op een normale plek het weer op.")
 
     if location is None:
-        bot.send_message(chat_id=chat_id, text="Deze plek bestaat niet, sorry.")
+        bot.send_message(chat_id=chat_id,
+                         reply_to_message_id=update.message.message_id,
+                         text="Deze plek bestaat niet, sorry.")
         return
 
     URL = (DARKSKY + "/" + DARKSKY_TOKEN + "/" + str(location.latitude)
@@ -44,11 +48,14 @@ def get_weather(update, context):
     response = requests.get(URL)
 
     if response is None:
-        bot.send_message(chat_id=chat_id, text="Kan niet verbinden met API.")
+        bot.send_message(chat_id=chat_id,
+                         reply_to_message_id=update.message.message_id,
+                         text="Kan niet verbinden met API helaas.")
     out = format_weather(location, response.json())
 
     bot.send_message(chat_id=update.message.chat_id,
                      text=out,
+                     reply_to_message_id=update.message.message_id,
                      parse_mode=ParseMode.MARKDOWN)
 
 def format_weather(location, response):

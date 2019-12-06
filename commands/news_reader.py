@@ -3,6 +3,7 @@ import collections
 
 from telegram.ext import CommandHandler
 from telegram.ext import BaseFilter, Filters
+from telegram import ParseMode
 
 from constants import ADMIN
 from constants import NEWS_FEEDS
@@ -52,9 +53,9 @@ def get_news_rep(context):
                 out = format_rss(feed, entry)
                 # print(out)
 
-                update.send_message(chat_id="@dutch_news", text=out,
-                                    disable_web_page_preview=True,
-                                    parse_mode=telegram.ParseMode.MARKDOWN)
+                bot.send_message(chat_id="@dutch_news", text=out,
+                                 disable_web_page_preview=True,
+                                 parse_mode=ParseMode.MARKDOWN)
 
         except Exception as e:
             print(e)

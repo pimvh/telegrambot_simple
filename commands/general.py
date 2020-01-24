@@ -24,7 +24,19 @@ def help_func(update, context):
     - /weer _[locatie]_ : geeft weer terug op locatie
     - /hallo : krijg een groet van deze bot
     - /waarom : krijg een willekeurige reden terug
-    - /bier: een database om bij te houden: van wie je bier krijgt of aan wie je bier schuldig bent
+    - /bier: een database om bij te houden: van wie je bier krijgt of aan wie je bier schuldig bent.
+    - /meme: haal memes van de reddit pagina me_irl of ik_ihe.
+    - /code: bekijk de code van deze robot.
+    """
+
+    bot.send_message(chat_id=update.message.chat_id, text=msg,
+                     reply_to_message_id=update.message.message_id,
+                     parse_mode=ParseMode.MARKDOWN)
+
+def view_code_func(update, content):
+    bot = context.bot
+    msg = """ De code van deze bot is geschreven met de Python-telegram-bot wrapper
+    en staat online op [Github](https://github.com/pimvh/telegrambot_simple).
     """
 
     bot.send_message(chat_id=update.message.chat_id, text=msg,
@@ -33,3 +45,4 @@ def help_func(update, context):
 
 start = CommandHandler("start", start_func)
 help_msg = CommandHandler("help", help_func)
+code = CommandHandler("code", view_code_func)

@@ -19,7 +19,7 @@ __status__ = "Production"
 
 import logging
 
-from commands.general import start, help_msg
+from commands.general import start, help_msg, code
 
 from commands.beer_base import beer_conv
 from commands.message_responses import (hello, leuk, question,
@@ -46,6 +46,7 @@ def main():
 
     dp.add_handler(start)
     dp.add_handler(help_msg)
+    dp.add_handler(code)
 
     dp.add_handler(beer_conv)
     dp.add_handler(hardtimes)

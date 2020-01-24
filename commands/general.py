@@ -34,9 +34,9 @@ def help_func(update, context):
                      parse_mode=ParseMode.MARKDOWN)
 
 def view_code_func(update, context):
+    """ shows user where to find bot code (Dutch) """
     bot = context.bot
-    msg = """ De code van deze bot is geschreven met de Python-telegram-bot wrapper
-    en staat online op [Github](https://github.com/pimvh/telegrambot_simple).
+    msg = """ De code van deze bot is geschreven met de Python-telegram-bot wrapper en staat online op [Github](https://github.com/pimvh/telegrambot_simple).
     """
 
     bot.send_message(chat_id=update.message.chat_id, text=msg,

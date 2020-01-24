@@ -33,7 +33,7 @@ def help_func(update, context):
                      reply_to_message_id=update.message.message_id,
                      parse_mode=ParseMode.MARKDOWN)
 
-def view_code_func(update, content):
+def view_code_func(update, context):
     bot = context.bot
     msg = """ De code van deze bot is geschreven met de Python-telegram-bot wrapper
     en staat online op [Github](https://github.com/pimvh/telegrambot_simple).

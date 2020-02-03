@@ -15,7 +15,7 @@ from constants import DATABASE_USER, DATABASE_PASS
 
 # Conversation states
 CHOICE, NAME, UPDATE = range(3)
-MONGO_STR = "mongodb://"+ DATABASE_USER + ":" + DATABASE_PASS + "@localhost:27017/beerbase"
+MONGO_STR = "mongodb://"+ DATABASE_USER + ":" + DATABASE_PASS + "@localhost:27017"
 
 def beer_start(update, context):
     """ starts the beer conversation, replying a keyboard with options"""
@@ -117,7 +117,7 @@ def beer_update(update, context):
     del context.user_data["name"]
 
     myclient = pymongo.MongoClient(MONGO_STR)
-    beer_database = myclient[str(chat_id)]
+    beer_database = myclient["beerbase"][str(chat_id)]
     query = {"name": name}
 
     result = beer_database.find_one(query)
@@ -179,7 +179,8 @@ def beer_update(update, context):
 def beer_output_data(chat_id, key):
     """ output the current contents of the database to the user """
     myclient = pymongo.MongoClient(MONGO_STR)
-    beer_database = myclient[str(chat_id)]
+    print(myclient)
+    beer_database = myclient["beerbase"][str(chat_id)]
     krijgen = False
 
     if key == 'k':

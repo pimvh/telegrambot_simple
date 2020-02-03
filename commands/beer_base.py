@@ -11,8 +11,11 @@ from telegram.ext import ConversationHandler
 from telegram.ext import MessageHandler
 from telegram.ext import (BaseFilter, Filters)
 
+from constants import DATABASE_USER, DATABASE_PASS
+
 # Conversation states
 CHOICE, NAME, UPDATE = range(3)
+MONGO_STR = f"mongodb://{DATABASE_USER}:{DATABASE_PASS}"
 
 def beer_start(update, context):
     """ starts the beer conversation, replying a keyboard with options"""
@@ -113,7 +116,7 @@ def beer_update(update, context):
     name = context.user_data["name"]
     del context.user_data["name"]
 
-    myclient = pymongo.MongoClient()
+    myclient = pymongo.MongoClient(MONGO_STR)
     beer_database = myclient["beerbase"][str(chat_id)]
     query = {"name": name}
 
@@ -175,7 +178,7 @@ def beer_update(update, context):
 
 def beer_output_data(chat_id, key):
     """ output the current contents of the database to the user """
-    myclient = pymongo.MongoClient()
+    myclient = pymongo.MongoClient(MONGO_STR)
     beer_database = myclient["beerbase"][str(chat_id)]
     krijgen = False
 

@@ -180,6 +180,8 @@ def beer_output_data(chat_id, key):
     myclient = pymongo.MongoClient(PYMONGO)
     print(myclient)
     beer_database = myclient["beerbase"][str(chat_id)]
+
+    print(beer_database)
     krijgen = False
 
     if key == 'k':

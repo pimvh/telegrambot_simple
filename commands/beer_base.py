@@ -15,7 +15,7 @@ from constants import DATABASE_USER, DATABASE_PASS
 
 # Conversation states
 CHOICE, NAME, UPDATE = range(3)
-MONGO_STR = "mongodb://"+ DATABASE_USER + ":" + DATABASE_PASS + "@localhost:27017"
+MONGO_STR = "mongodb://"+ DATABASE_USER + ":" + DATABASE_PASS + "@localhost:27017/beerbase"
 
 def beer_start(update, context):
     """ starts the beer conversation, replying a keyboard with options"""

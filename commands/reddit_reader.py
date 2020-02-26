@@ -41,12 +41,16 @@ def get_memes(update, context):
     inc_msg = update.message.text
 
     page = REDDIT[inc_msg]
-    feed = feedparser.parse(page)
 
-    # print(feed, '\n\n')
-    # update_tag = feed['feed']['updated']
-
-    msg = f"'*' {feed['feed']['title']} '*'"
+    try:
+        feed = feedparser.parse(page)
+        msg = f"'*' {feed['feed']['title']} '*'"
+    except:
+        msg = "Error occured, please try later."
+        bot.send_message(chat_id, msg,
+                         reply_to_message_id=update.message.message_id,
+                         parse_mode=ParseMode.MARKDOWN)
+        return
 
     if feed['feed'].get('subtitle', 0):
         subtitle = feed['feed']['subtitle']
@@ -69,9 +73,8 @@ def get_memes(update, context):
         post_content_html = post['content'][0]['value']
 
         bs_content = bs(post_content_html, "xml")
-        # print( '\n\n', post_content_html, '\n\n')
         span = bs_content.find("span")
-        # print(span, '\n\n')
+
         if span:
             img_links.append(span.find("a", href=True)['href'])
 
